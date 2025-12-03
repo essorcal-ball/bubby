@@ -89,7 +89,7 @@ function drawObstacle(obstacle) {
         ctx.beginPath();
         
         if (obstacle.type === 'box') {
-            // Ground Spikes: Start at ground level (bottom left)
+            // Ground Spikes: Draw upward from the base
             ctx.moveTo(startX, startY + spikeHeight); 
             for (let i = 0; i < numSpikes; i++) {
                 // Draw the point of the spike (top)
@@ -98,7 +98,7 @@ function drawObstacle(obstacle) {
                 ctx.lineTo(startX + ((i + 1) * spikeWidth), startY + spikeHeight);
             }
         } else if (obstacle.type === 'flying') {
-            // Flying Spikes: Start at the top edge (top left)
+            // Flying Spikes: Draw downward from the top edge
             ctx.moveTo(startX, startY);
             for (let i = 0; i < numSpikes; i++) {
                 // Draw the point of the spike (bottom)
@@ -300,4 +300,13 @@ canvas.addEventListener('click', jump);
 
 // Handle keyboard input (Spacebar)
 document.addEventListener('keydown', (e) => {
-    if (e.code
+    if (e.code === 'Space') {
+        jump();
+    }
+});
+
+// Listen for the reset button click
+resetButton.addEventListener('click', resetGame);
+
+// Start the game loop!
+gameLoop();
