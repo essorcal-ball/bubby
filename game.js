@@ -72,38 +72,48 @@ function drawStickman() {
     ctx.stroke();
 }
 
-// Draw an Obstacle (single spike or gap)
+// Draw an Obstacle (single spike, plane, or gap)
 function drawObstacle(obstacle) {
     
     // Check if it's a solid obstacle (ground or flying)
     if (obstacle.type === 'box' || obstacle.type === 'flying') {
         
-        ctx.fillStyle = (obstacle.type === 'box') ? 'red' : 'blue';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
 
-        // Uses a single spike that takes up the full width/height of the obstacle's bounding box
-        const spikeWidth = obstacle.width;
-        const spikeHeight = obstacle.height;
+        const width = obstacle.width;
+        const height = obstacle.height;
         const startX = obstacle.x;
         const startY = obstacle.y;
 
-        ctx.beginPath();
-        
+        // Ground Spike Drawing (Gray)
         if (obstacle.type === 'box') {
-            // Ground Spikes: Draw a single upward-pointing triangle
-            ctx.moveTo(startX, startY + spikeHeight); // Bottom-left corner
-            ctx.lineTo(startX + (spikeWidth / 2), startY); // Top peak
-            ctx.lineTo(startX + spikeWidth, startY + spikeHeight); // Bottom-right corner
+            ctx.fillStyle = '#808080'; // Gray spike color
+            ctx.beginPath();
+            // Draw a single upward-pointing triangle
+            ctx.moveTo(startX, startY + height); // Bottom-left corner
+            ctx.lineTo(startX + (width / 2), startY); // Top peak
+            ctx.lineTo(startX + width, startY + height); // Bottom-right corner
+            ctx.fill();
+            ctx.stroke(); 
+        
+        // Flying Plane Drawing (Blue)
         } else if (obstacle.type === 'flying') {
-            // Flying Spikes: Draw a single downward-pointing triangle
-            ctx.moveTo(startX, startY); // Top-left corner
-            ctx.lineTo(startX + (spikeWidth / 2), startY + spikeHeight); // Bottom peak
-            ctx.lineTo(startX + spikeWidth, startY); // Top-right corner
-        }
+            ctx.fillStyle = 'blue'; // Blue plane color
+            
+            // 1. Fuselage (main body, a rectangle)
+            ctx.fillRect(startX, startY + height / 4, width, height / 2); 
+            
+            // 2. Wings (a thin rectangle centered on the fuselage)
+            const wingHeight = height / 5;
+            const wingWidth = width + 10;
+            ctx.fillRect(startX - 5, startY + height / 2 - wingHeight / 2, wingWidth, wingHeight);
 
-        ctx.fill();
-        ctx.stroke(); 
+            // 3. Tail Fin (a small box at the back)
+            ctx.fillRect(startX + width - 5, startY, 5, height / 4);
+            
+            // Note: We use fillRect for the plane, so no path stroke is needed for the shape.
+        }
         
     } else if (obstacle.type === 'gap') {
         // Gap/Pit drawing
@@ -142,4 +152,184 @@ function updateStickman() {
         stickman.isJumping = false;
         
         // Reset jumps when landing on the ground
-        jumpsRemaining = MAX_JUMPS;
+        jumpsRemaining = MAX_JUMPS; 
+    }
+}
+
+function updateObstacles() {
+    // 1. Move existing obstacles
+    obstacles.forEach(obstacle => {
+        obstacle.x -= obstacleSpeed;
+    });
+
+    // 2. Remove off-screen obstacles
+    obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+
+    // 3. Spawning Logic
+    const lastObstacle = obstacles.length > 0 ? obstacles[obstacles.length - 1] : null;
+
+    // Only spawn a new obstacle if the previous one is far enough away
+    if (!lastObstacle || lastObstacle.x < canvas.width - 250) { 
+        
+        const hazardType = Math.random(); 
+
+        if (hazardType < 0.40) {
+            // A. Normal/Small Obstacle (40% chance)
+            const height = 20 + Math.random() * 30;
+            obstacles.push({
+                type: 'box',
+                x: canvas.width,
+                y: stickman.groundY + stickman.height - height + 10,
+                width: 20,
+                height: height
+            });
+
+        } else if (hazardType < 0.55) {
+            // B. Tall Obstacle (15% chance)
+            obstacles.push({
+                type: 'box',
+                x: canvas.width,
+                y: stickman.groundY + stickman.height - tallObstacleHeight + 10,
+                width: 20,
+                height: tallObstacleHeight
+            });
+
+        } else if (hazardType < 0.70) {
+            // C. Gap in the Ground (15% chance)
+            const gapWidth = minGapWidth + Math.random() * (maxGapWidth - minGapWidth);
+            obstacles.push({
+                type: 'gap',
+                x: canvas.width,
+                y: stickman.groundY + 10,
+                width: gapWidth,
+                height: 10
+            });
+
+        } else if (hazardType < 0.85) {
+            // D. Flying Obstacle (15% chance)
+            obstacles.push({
+                type: 'flying',
+                x: canvas.width,
+                y: flyingObstacleY,
+                width: 40,
+                height: 20
+            });
+        }
+    }
+}
+
+// Check for collision
+function checkCollision() {
+    obstacles.forEach(obstacle => {
+        
+        // Collision for solid obstacles ('box' and 'flying' spikes/planes)
+        if (obstacle.type === 'box' || obstacle.type === 'flying') {
+             if (
+                stickman.x < obstacle.x + obstacle.width &&
+                stickman.x + stickman.width > obstacle.x &&
+                stickman.y < obstacle.y + obstacle.height &&
+                stickman.y + stickman.height > obstacle.y
+            ) {
+                isGameOver = true;
+            }
+        } 
+        
+        // Collision for 'gap' obstacles
+        else if (obstacle.type === 'gap') {
+            // Check if stickman is horizontally within the gap
+            if (stickman.x + stickman.width > obstacle.x && stickman.x < obstacle.x + obstacle.width) {
+                
+                // Check if the stickman is on or below the normal ground level (i.e., failed the jump)
+                if (stickman.y + stickman.height >= stickman.groundY + 10) { 
+                    isGameOver = true;
+                }
+            }
+        }
+    });
+}
+
+// Reset Game Function
+function resetGame() {
+    // Reset player position
+    stickman.y = stickman.groundY;
+    stickman.dy = 0;
+    stickman.isJumping = false;
+    
+    // Reset jump state
+    jumpsRemaining = MAX_JUMPS; 
+    
+    // Clear all obstacles
+    obstacles = [];
+    
+    // RESET FIX: Reset the active speed to the initial value (prevents speed up)
+    obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
+    
+    // Reset game state and score
+    isGameOver = false;
+    score = 0; 
+    scoreDisplay.textContent = `Score: 0`;
+    
+    // Hide the button
+    resetButton.style.display = 'none';
+    
+    // Restart the game loop
+    gameLoop();
+}
+
+// --- Main Game Loop ---
+function gameLoop() {
+    // Clear the canvas on every frame
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!isGameOver) {
+        updateStickman();
+        updateObstacles();
+        checkCollision();
+        
+        // Update and display the score while playing
+        score += 0.1; 
+        scoreDisplay.textContent = `Score: ${Math.floor(score)}`;
+    }
+
+    // Drawing phase
+    drawGround();
+    drawStickman();
+    obstacles.forEach(drawObstacle);
+    
+    // Check for Game Over and draw the screen
+    if (isGameOver) {
+        ctx.fillStyle = 'black';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+        
+        // Show the button when the game is over
+        resetButton.style.display = 'block'; 
+
+    } else {
+        // Ensure the button is hidden while playing
+        resetButton.style.display = 'none';
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// --- Event Listeners ---
+
+// Mousedown/Click: Triggers jump immediately
+canvas.addEventListener('mousedown', initiateJump);
+
+// Keydown (Spacebar): Triggers jump immediately
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        // Prevent default browser action (scrolling) when space is pressed
+        e.preventDefault(); 
+        initiateJump();
+    }
+});
+
+// Listen for the reset button click
+resetButton.addEventListener('click', resetGame);
+
+// Start the game loop!
+gameLoop();
