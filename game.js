@@ -7,7 +7,7 @@ const scoreDisplay = document.getElementById('scoreDisplay');
 // --- Game Constants ---
 const gravity = 0.6;
 const jumpStrength = 15;
-const obstacleSpeed = 5;
+const INITIAL_OBSTACLE_SPEED = 3; // Fixed starting speed
 
 // Obstacle Complexity Constants
 const minGapWidth = 100;
@@ -30,6 +30,7 @@ let stickman = {
 let obstacles = [];
 let isGameOver = false;
 let score = 0;
+let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, now resettable
 
 // --- Drawing Functions ---
 
@@ -38,7 +39,6 @@ function drawGround() {
     ctx.strokeStyle = '#222';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    // Draw a line a little below the stickman's starting point
     ctx.moveTo(0, stickman.groundY + 10); 
     ctx.lineTo(canvas.width, stickman.groundY + 10);
     ctx.stroke();
@@ -242,6 +242,9 @@ function resetGame() {
     
     // Clear all obstacles
     obstacles = [];
+    
+    // RESET FIX: Reset the active speed to the initial value
+    obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
     
     // Reset game state and score
     isGameOver = false;
