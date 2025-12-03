@@ -6,14 +6,19 @@ const scoreDisplay = document.getElementById('scoreDisplay');
 
 // --- Game Constants ---
 const gravity = 0.6;
-const jumpStrength = 15;
 const INITIAL_OBSTACLE_SPEED = 5; // Fixed starting speed
+const MAX_JUMPS = 2;              // Allows for one initial jump + one mid-air jump
+
+// Chargeable Jump Constants
+const INITIAL_JUMP_STRENGTH = 12; // Base jump power
+const MAX_JUMP_STRENGTH = 20;     // Max jump power when fully charged
+const CHARGE_RATE = 0.5;          // How much jump strength increases per frame held
 
 // Obstacle Complexity Constants
 const minGapWidth = 100;
 const maxGapWidth = 150;
 const tallObstacleHeight = 80;
-const flyingObstacleY = 120; 
+const flyingObstacleY = 150; 
 
 // --- Player (Stickman) Object ---
 let stickman = {
@@ -31,6 +36,9 @@ let obstacles = [];
 let isGameOver = false;
 let score = 0;
 let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, now resettable
+let jumpsRemaining = MAX_JUMPS;             // Jumps available in the current air phase
+let currentJumpStrength = INITIAL_JUMP_STRENGTH; // Tracks power for current jump
+let isInputHeld = false;                         // Tracks if space/mouse is pressed
 
 // --- Drawing Functions ---
 
@@ -80,7 +88,7 @@ function drawObstacle(obstacle) {
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
 
-        const numSpikes = 3; // Number of spike points to draw per obstacle width
+        const numSpikes = 3; 
         const spikeWidth = obstacle.width / numSpikes;
         const spikeHeight = obstacle.height;
         const startX = obstacle.x;
@@ -92,18 +100,14 @@ function drawObstacle(obstacle) {
             // Ground Spikes: Draw upward from the base
             ctx.moveTo(startX, startY + spikeHeight); 
             for (let i = 0; i < numSpikes; i++) {
-                // Draw the point of the spike (top)
                 ctx.lineTo(startX + (i * spikeWidth) + (spikeWidth / 2), startY);
-                // Draw the right corner of the base (ground level)
                 ctx.lineTo(startX + ((i + 1) * spikeWidth), startY + spikeHeight);
             }
         } else if (obstacle.type === 'flying') {
             // Flying Spikes: Draw downward from the top edge
             ctx.moveTo(startX, startY);
             for (let i = 0; i < numSpikes; i++) {
-                // Draw the point of the spike (bottom)
                 ctx.lineTo(startX + (i * spikeWidth) + (spikeWidth / 2), startY + spikeHeight);
-                // Draw the right corner of the base (top level)
                 ctx.lineTo(startX + ((i + 1) * spikeWidth), startY);
             }
         }
@@ -114,19 +118,41 @@ function drawObstacle(obstacle) {
     } else if (obstacle.type === 'gap') {
         // Gap/Pit drawing
         ctx.fillStyle = '#aaa'; 
-        // Fill the space from the ground line down
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, canvas.height - obstacle.y);
     }
 }
 
 // --- Game Logic Functions ---
 
-function jump() {
-    if (!stickman.isJumping && !isGameOver) {
-        stickman.isJumping = true;
-        stickman.dy = -jumpStrength;
+// Function to update the jump power while the input is held down
+function updateJumpCharge() {
+    // Only charge if input is held AND stickman is NOT already jumping AND game is not over
+    if (isInputHeld && !stickman.isJumping && !isGameOver) {
+        if (currentJumpStrength < MAX_JUMP_STRENGTH) {
+            currentJumpStrength += CHARGE_RATE;
+        }
     }
 }
+
+// Function executed when the jump input is released
+function releaseJump() {
+    isInputHeld = false; // Stop charging
+
+    // Check if the stickman has jumps remaining AND the game is not over
+    if (jumpsRemaining > 0 && !isGameOver) { 
+        
+        // Apply the charged strength
+        stickman.isJumping = true;
+        stickman.dy = -currentJumpStrength; 
+
+        // Decrement the jump counter
+        jumpsRemaining--; 
+
+        // Immediately reset charge for the next jump
+        currentJumpStrength = INITIAL_JUMP_STRENGTH;
+    }
+}
+
 
 function updateStickman() {
     // Apply gravity and update position
@@ -138,6 +164,9 @@ function updateStickman() {
         stickman.y = stickman.groundY;
         stickman.dy = 0;
         stickman.isJumping = false;
+        
+        // Reset jumps when landing on the ground
+        jumpsRemaining = MAX_JUMPS; 
     }
 }
 
@@ -153,7 +182,6 @@ function updateObstacles() {
     // 3. Spawning Logic
     const lastObstacle = obstacles.length > 0 ? obstacles[obstacles.length - 1] : null;
 
-    // Only spawn a new obstacle if the previous one is far enough away
     if (!lastObstacle || lastObstacle.x < canvas.width - 250) { 
         
         const hazardType = Math.random(); 
@@ -169,8 +197,8 @@ function updateObstacles() {
                 height: height
             });
 
-        } else if (hazardType < 0.65) {
-            // B. Tall Obstacle (25% chance)
+        } else if (hazardType < 0.55) {
+            // B. Tall Obstacle (15% chance)
             obstacles.push({
                 type: 'box',
                 x: canvas.width,
@@ -179,7 +207,17 @@ function updateObstacles() {
                 height: tallObstacleHeight
             });
 
-        
+        } else if (hazardType < 0.70) {
+            // C. Gap in the Ground (15% chance)
+            const gapWidth = minGapWidth + Math.random() * (maxGapWidth - minGapWidth);
+            obstacles.push({
+                type: 'gap',
+                x: canvas.width,
+                y: stickman.groundY + 10,
+                width: gapWidth,
+                height: 10
+            });
+
         } else if (hazardType < 0.85) {
             // D. Flying Obstacle (15% chance)
             obstacles.push({
@@ -230,11 +268,15 @@ function resetGame() {
     stickman.dy = 0;
     stickman.isJumping = false;
     
+    // Reset jump state
+    jumpsRemaining = MAX_JUMPS; 
+    currentJumpStrength = INITIAL_JUMP_STRENGTH;
+    
     // Clear all obstacles
     obstacles = [];
     
     // RESET FIX: Reset the active speed to the initial value
-    let obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
+    obstacleSpeed = 5; 
     
     // Reset game state and score
     isGameOver = false;
@@ -254,6 +296,9 @@ function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!isGameOver) {
+        // CHARGE FEATURE: Check if the player is holding the jump button
+        updateJumpCharge(); 
+
         updateStickman();
         updateObstacles();
         checkCollision();
@@ -288,16 +333,24 @@ function gameLoop() {
 
 // --- Event Listeners ---
 
-// Handle click/touch input
-canvas.addEventListener('click', jump);
+// Mousedown/Click: Start charging
+canvas.addEventListener('mousedown', () => {
+    isInputHeld = true;
+});
+canvas.addEventListener('mouseup', releaseJump); // Release triggers the jump
 
-// Handle keyboard input (Spacebar)
+// Keydown: Start charging
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space') {
-        jump();
+        isInputHeld = true;
     }
 });
-
+// Keyup: Trigger jump release
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        releaseJump();
+    }
+});
 // Listen for the reset button click
 resetButton.addEventListener('click', resetGame);
 
