@@ -31,7 +31,7 @@ let stickman = {
 let obstacles = [];
 let isGameOver = false;
 let score = 0;
-let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, now resettable
+let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, fixed at 5
 let jumpsRemaining = MAX_JUMPS;             // Jumps available in the current air phase
 
 // --- Drawing Functions ---
@@ -178,7 +178,7 @@ function updateObstacles() {
                 height: height
             });
 
-        } else if (hazardType < 0.65) {
+        } else if (hazardType < 0.55) {
             // B. Tall Obstacle (15% chance)
             obstacles.push({
                 type: 'box',
@@ -188,7 +188,17 @@ function updateObstacles() {
                 height: tallObstacleHeight
             });
 
-        
+        } else if (hazardType < 0.70) {
+            // C. Gap in the Ground (15% chance)
+            const gapWidth = minGapWidth + Math.random() * (maxGapWidth - minGapWidth);
+            obstacles.push({
+                type: 'gap',
+                x: canvas.width,
+                y: stickman.groundY + 10,
+                width: gapWidth,
+                height: 10
+            });
+
         } else if (hazardType < 0.85) {
             // D. Flying Obstacle (15% chance)
             obstacles.push({
@@ -245,8 +255,8 @@ function resetGame() {
     // Clear all obstacles
     obstacles = [];
     
-    // RESET FIX: Reset the active speed to the initial value
-    let obstacleSpeed = 5; 
+    // RESET FIX: Reset the active speed to the initial value (prevents speed up)
+    obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
     
     // Reset game state and score
     isGameOver = false;
