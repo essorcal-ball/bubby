@@ -289,6 +289,12 @@ function gameLoop() {
     drawGround();
     drawStickman();
     obstacles.forEach(drawObstacle);
+
+    // Draw the Speed Value
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Speed: ${obstacleSpeed}`, 10, 30); // Position it at the top left (10, 30)
     
     // Check for Game Over and draw the screen
     if (isGameOver) {
