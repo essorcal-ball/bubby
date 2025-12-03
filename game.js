@@ -23,7 +23,7 @@ let stickman = {
     height: 40,
     dy: 0,
     isJumping: false,
-    groundY: canvas.height - 50
+    groundY: canvas.height - 50 // The floor level
 };
 
 // --- Game State ---
@@ -38,6 +38,7 @@ function drawGround() {
     ctx.strokeStyle = '#222';
     ctx.lineWidth = 2;
     ctx.beginPath();
+    // Draw a line a little below the stickman's starting point
     ctx.moveTo(0, stickman.groundY + 10); 
     ctx.lineTo(canvas.width, stickman.groundY + 10);
     ctx.stroke();
@@ -69,22 +70,52 @@ function drawStickman() {
     ctx.stroke();
 }
 
-// Draw an Obstacle (box, gap, or flying box)
+// Draw an Obstacle (spikes, gap, or flying spikes)
 function drawObstacle(obstacle) {
-    if (obstacle.type === 'box') {
-        // Ground obstacle
-        ctx.fillStyle = 'red';
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    
+    // Check if it's a solid obstacle (ground or flying)
+    if (obstacle.type === 'box' || obstacle.type === 'flying') {
+        
+        ctx.fillStyle = (obstacle.type === 'box') ? 'red' : 'blue';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+
+        const numSpikes = 3; // Number of spike points to draw per obstacle width
+        const spikeWidth = obstacle.width / numSpikes;
+        const spikeHeight = obstacle.height;
+        const startX = obstacle.x;
+        const startY = obstacle.y;
+
+        ctx.beginPath();
+        
+        if (obstacle.type === 'box') {
+            // Ground Spikes: Start at ground level (bottom left)
+            ctx.moveTo(startX, startY + spikeHeight); 
+            for (let i = 0; i < numSpikes; i++) {
+                // Draw the point of the spike (top)
+                ctx.lineTo(startX + (i * spikeWidth) + (spikeWidth / 2), startY);
+                // Draw the right corner of the base (ground level)
+                ctx.lineTo(startX + ((i + 1) * spikeWidth), startY + spikeHeight);
+            }
+        } else if (obstacle.type === 'flying') {
+            // Flying Spikes: Start at the top edge (top left)
+            ctx.moveTo(startX, startY);
+            for (let i = 0; i < numSpikes; i++) {
+                // Draw the point of the spike (bottom)
+                ctx.lineTo(startX + (i * spikeWidth) + (spikeWidth / 2), startY + spikeHeight);
+                // Draw the right corner of the base (top level)
+                ctx.lineTo(startX + ((i + 1) * spikeWidth), startY);
+            }
+        }
+
+        ctx.fill();
+        ctx.stroke(); 
         
     } else if (obstacle.type === 'gap') {
-        // Gap/Pit
+        // Gap/Pit drawing
         ctx.fillStyle = '#aaa'; 
+        // Fill the space from the ground line down
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, canvas.height - obstacle.y);
-        
-    } else if (obstacle.type === 'flying') { 
-        // Flying obstacle
-        ctx.fillStyle = 'blue';
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     }
 }
 
@@ -98,9 +129,11 @@ function jump() {
 }
 
 function updateStickman() {
+    // Apply gravity and update position
     stickman.dy += gravity; 
     stickman.y += stickman.dy; 
 
+    // Check if the stickman has landed
     if (stickman.y >= stickman.groundY) {
         stickman.y = stickman.groundY;
         stickman.dy = 0;
@@ -120,6 +153,7 @@ function updateObstacles() {
     // 3. Spawning Logic
     const lastObstacle = obstacles.length > 0 ? obstacles[obstacles.length - 1] : null;
 
+    // Only spawn a new obstacle if the previous one is far enough away
     if (!lastObstacle || lastObstacle.x < canvas.width - 250) { 
         
         const hazardType = Math.random(); 
@@ -173,7 +207,7 @@ function updateObstacles() {
 function checkCollision() {
     obstacles.forEach(obstacle => {
         
-        // Check for collision with solid 'box' or 'flying' obstacles
+        // Collision for solid obstacles ('box' and 'flying' spikes)
         if (obstacle.type === 'box' || obstacle.type === 'flying') {
              if (
                 stickman.x < obstacle.x + obstacle.width &&
@@ -185,12 +219,12 @@ function checkCollision() {
             }
         } 
         
-        // Check for collision (falling) with 'gap' obstacles
+        // Collision for 'gap' obstacles
         else if (obstacle.type === 'gap') {
             // Check if stickman is horizontally within the gap
             if (stickman.x + stickman.width > obstacle.x && stickman.x < obstacle.x + obstacle.width) {
                 
-                // Check if the stickman is on or below the normal ground level
+                // Check if the stickman is on or below the normal ground level (i.e., failed the jump)
                 if (stickman.y + stickman.height >= stickman.groundY + 10) { 
                     isGameOver = true;
                 }
@@ -266,13 +300,4 @@ canvas.addEventListener('click', jump);
 
 // Handle keyboard input (Spacebar)
 document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
-        jump();
-    }
-});
-
-// Listen for the reset button click
-resetButton.addEventListener('click', resetGame);
-
-// Start the game loop!
-gameLoop();
+    if (e.code
