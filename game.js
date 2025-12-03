@@ -234,7 +234,7 @@ function resetGame() {
     obstacles = [];
     
     // RESET FIX: Reset the active speed to the initial value
-    obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
+    let obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
     
     // Reset game state and score
     isGameOver = false;
