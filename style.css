@@ -1,0 +1,22 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+    font-family: sans-serif;
+}
+
+#gameCanvas {
+    border: 3px solid #333;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+#instructions {
+    margin-top: 20px;
+    font-size: 1.2em;
+    color: #555;
+}
