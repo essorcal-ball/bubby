@@ -7,13 +7,13 @@ const scoreDisplay = document.getElementById('scoreDisplay');
 // --- Game Constants ---
 const gravity = 0.6;
 const jumpStrength = 15;
-const INITIAL_OBSTACLE_SPEED = 3; // Fixed starting speed
+const INITIAL_OBSTACLE_SPEED = 5; // Fixed starting speed
 
 // Obstacle Complexity Constants
 const minGapWidth = 100;
 const maxGapWidth = 150;
 const tallObstacleHeight = 80;
-const flyingObstacleY = 150; 
+const flyingObstacleY = 120; 
 
 // --- Player (Stickman) Object ---
 let stickman = {
@@ -169,8 +169,8 @@ function updateObstacles() {
                 height: height
             });
 
-        } else if (hazardType < 0.55) {
-            // B. Tall Obstacle (15% chance)
+        } else if (hazardType < 0.65) {
+            // B. Tall Obstacle (25% chance)
             obstacles.push({
                 type: 'box',
                 x: canvas.width,
@@ -179,17 +179,7 @@ function updateObstacles() {
                 height: tallObstacleHeight
             });
 
-        } else if (hazardType < 0.70) {
-            // C. Gap in the Ground (15% chance)
-            const gapWidth = minGapWidth + Math.random() * (maxGapWidth - minGapWidth);
-            obstacles.push({
-                type: 'gap',
-                x: canvas.width,
-                y: stickman.groundY + 10,
-                width: gapWidth,
-                height: 10
-            });
-
+        
         } else if (hazardType < 0.85) {
             // D. Flying Obstacle (15% chance)
             obstacles.push({
