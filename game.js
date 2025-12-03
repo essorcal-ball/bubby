@@ -153,7 +153,7 @@ function updateStickman() {
 function updateObstacles() {
     // 1. Move existing obstacles
     obstacles.forEach(obstacle => {
-        obstacle.x = obstacleSpeed;
+        obstacle.x -= obstacleSpeed;
     });
 
     // 2. Remove off-screen obstacles
