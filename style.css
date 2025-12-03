@@ -44,3 +44,9 @@ body {
     font-size: 1.2em;
     color: #555;
 }
+
+#creditFooter {
+    margin-top: 25px;
+    font-size: 0.9em;
+    color: #888;
+}
