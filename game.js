@@ -31,7 +31,7 @@ let stickman = {
 let obstacles = [];
 let isGameOver = false;
 let score = 0;
-let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, fixed at 5
+let obstacleSpeed = 5; // Active speed, fixed at 5
 let jumpsRemaining = MAX_JUMPS;             // Jumps available in the current air phase
 
 // --- Drawing Functions ---
@@ -256,7 +256,7 @@ function resetGame() {
     obstacles = [];
     
     // RESET FIX: Reset the active speed to the initial value (prevents speed up)
-    obstacleSpeed = INITIAL_OBSTACLE_SPEED; 
+    let obstacleSpeed = 5; 
     
     // Reset game state and score
     isGameOver = false;
