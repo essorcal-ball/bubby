@@ -9,6 +9,7 @@ const gravity = 0.6;
 const INITIAL_OBSTACLE_SPEED = 5; // Fixed running speed
 const MAX_JUMPS = 2;              // Allows for one initial jump + one mid-air jump
 const JUMP_STRENGTH = 15;         // Fixed jump power
+const LOCAL_STORAGE_KEY = 'stickmanRunnerHighScore'; // Key for saving high score
 
 // Obstacle Complexity Constants
 const minGapWidth = 100;
@@ -31,6 +32,7 @@ let stickman = {
 let obstacles = [];
 let isGameOver = false;
 let score = 0;
+let highScore = 0;                  // Holds the current high score value
 let obstacleSpeed = INITIAL_OBSTACLE_SPEED; // Active speed, fixed at 5
 let jumpsRemaining = MAX_JUMPS;             // Jumps available in the current air phase
 
@@ -111,14 +113,30 @@ function drawObstacle(obstacle) {
 
             // 3. Tail Fin (a small box at the back)
             ctx.fillRect(startX + width - 5, startY, 5, height / 4);
-            
-            // Note: We use fillRect for the plane, so no path stroke is needed for the shape.
         }
         
     } else if (obstacle.type === 'gap') {
         // Gap/Pit drawing
         ctx.fillStyle = '#aaa'; 
         ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, canvas.height - obstacle.y);
+    }
+}
+
+// --- High Score Functions ---
+
+// Load the high score from local storage
+function loadHighScore() {
+    const savedScore = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedScore) {
+        highScore = parseInt(savedScore);
+    }
+}
+
+// Check and save high score
+function updateHighScore() {
+    if (Math.floor(score) > highScore) {
+        highScore = Math.floor(score);
+        localStorage.setItem(LOCAL_STORAGE_KEY, highScore);
     }
 }
 
@@ -231,6 +249,7 @@ function checkCollision() {
                 stickman.y + stickman.height > obstacle.y
             ) {
                 isGameOver = true;
+                updateHighScore(); // Check and save the score on loss
             }
         } 
         
@@ -242,6 +261,7 @@ function checkCollision() {
                 // Check if the stickman is on or below the normal ground level (i.e., failed the jump)
                 if (stickman.y + stickman.height >= stickman.groundY + 10) { 
                     isGameOver = true;
+                    updateHighScore(); // Check and save the score on loss
                 }
             }
         }
@@ -296,6 +316,12 @@ function gameLoop() {
     drawStickman();
     obstacles.forEach(drawObstacle);
     
+    // Draw the High Score
+    ctx.fillStyle = 'black';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`High Score: ${highScore}`, canvas.width - 20, 30); // Top right corner
+
     // Check for Game Over and draw the screen
     if (isGameOver) {
         ctx.fillStyle = 'black';
@@ -330,6 +356,9 @@ document.addEventListener('keydown', (e) => {
 
 // Listen for the reset button click
 resetButton.addEventListener('click', resetGame);
+
+// Load high score before the game begins
+loadHighScore(); 
 
 // Start the game loop!
 gameLoop();
