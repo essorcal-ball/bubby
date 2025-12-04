@@ -3,520 +3,1250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adventures of Bob the Stickman</title>
+    <title>Stickman Jumper</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configure custom colors and font -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        'primary': '#10b981', // green-500
-                        'secondary': '#3b82f6', // blue-500
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        /* Custom styles for the keyboard key */
-        kbd {
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            padding: 2px 4px;
-            font-family: monospace;
-            font-size: 0.875rem;
-            white-space: nowrap;
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 0 0 2px #fff inset;
-            background-color: #f7f7f7;
-            color: #333;
+        /* Custom styles for visual appeal and responsiveness */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e; /* Dark background */
         }
-        .game-simulation {
-            animation: run 4s linear infinite;
+        .screen {
+            display: none; /* All screens hidden by default, shown via JS */
+            height: 100vh;
+            width: 100vw;
+            transition: opacity 0.3s ease-in-out;
+            box-sizing: border-box;
         }
-        /* Keyframe animation to simulate the background scrolling/running */
-        @keyframes run {
-            0% { background-position: 0 0; }
-            100% { background-position: -400px 0; }
+        .main-button {
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .main-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+        }
+        .main-button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        /* Game specific styling */
+        #gameCanvas {
+            background-color: #4a5568; /* Grey background for the world */
+            border: 4px solid #e94560;
+            border-radius: 12px;
+            touch-action: manipulation; /* Improves mobile touch responsiveness */
+        }
+        .game-status-box {
+            background-color: #16213e;
+            border-radius: 8px;
+            padding: 12px 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        /* Shop card styles */
+        .shop-card {
+            background-color: #16213e; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: transform 0.1s;
+        }
+        .shop-card:hover {
+            transform: translateY(-2px);
+            border-color: #e94560;
         }
     </style>
 </head>
-<body class="font-sans min-h-screen flex items-center justify-center p-4 bg-gray-100">
+<body class="flex items-center justify-center text-white">
 
-    <!-- Background Decoration -->
-    <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-100 opacity-80 -z-10"></div>
+    <div id="app-container" class="w-full h-full">
 
-    <!-- Main App Container -->
-    <div id="app" class="relative w-full max-w-4xl flex items-center justify-center">
-        <!-- Content will be rendered here -->
-    </div>
-
-    <!-- Firebase SDK Imports -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- GLOBAL SETUP ---
-
-        // Firebase Configuration (provided by environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'adventures-of-bob';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Game Constants
-        const UPGRADES = [
-            { key: 'disappearObstacle', name: 'Disappear Obstacle', cost: 50, description: 'Clears obstacles in a small area when activated.', icon: '💥' },
-            { key: 'invisible', name: 'Invisible Skin', cost: 100, description: 'Makes Bob invincible and lightly shaded for a short time.', icon: '👻' },
-        ];
-        const COIN_VALUE = 10;
-        const POWER_UP_DURATION_MS = 5000;
-        
-        // Firebase Instances
-        let app, db, auth;
-        let userId = null;
-        let isAuthReady = false;
-
-        // State Variables
-        let coins = 0;
-        let ownedUpgrades = {};
-        let activePowerUp = null; // 'disappearObstacle', 'invisible', or null
-        let notification = '';
-        let currentView = 'menu';
-        let isCoinAvailable = true; // State for the coin simulation in the game
-
-        const appElement = document.getElementById('app');
-
-        // --- UTILITY FUNCTIONS ---
-
-        /** Updates the state variables and re-renders the UI. */
-        function updateState(newState) {
-            Object.assign(window.gameData, newState);
-            renderApp();
-        }
-
-        /** Shows a temporary notification message. */
-        function showNotification(message, duration = 2000) {
-            updateState({ notification: message });
-            setTimeout(() => updateState({ notification: '' }), duration);
-        }
-
-        /** Renders a common button style. */
-        function NavButton(text, onClick, color = 'primary') {
-            return `
-                <button onclick="${onClick}"
-                    class="w-full sm:w-64 px-8 py-4 m-2 text-xl font-bold rounded-xl shadow-lg
-                           transform transition duration-300 ease-in-out
-                           bg-${color}-500 hover:bg-${color}-600 text-white
-                           hover:scale-105 active:scale-95 ring-4 ring-${color}-300">
-                    ${text}
+        <!-- 1. MAIN MENU SCREEN -->
+        <div id="menu-screen" class="screen flex flex-col items-center justify-center p-4">
+            <h1 class="text-6xl md:text-8xl font-extrabold text-[#e94560] mb-12 animate-pulse tracking-widest">
+                ARCADE HERO
+            </h1>
+            <div class="flex flex-col space-y-6 w-full max-w-sm">
+                
+                <button onclick="goToScreen('game')" 
+                        class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">
+                    PLAY GAME
                 </button>
-            `;
-        }
 
-        // --- CORE GAME LOGIC (FIREBASE INTERACTION) ---
+                <button onclick="goToScreen('shop')" 
+                        class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">
+                    SHOP
+                </button>
+            </div>
+        </div>
 
-        /** Initializes the user data in Firestore if it doesn't exist. */
-        async function setupUserData(docRef) {
-            const initialData = {
-                coins: 100,
-                upgrades: { disappearObstacle: false, invisible: false },
-                activeSkin: 'default',
-            };
-            try {
-                await setDoc(docRef, initialData, { merge: true });
-            } catch (e) {
-                console.error("Error setting initial document:", e);
-            }
-        }
+        <!-- 2. GAME SCREEN (Stickman Jumper) -->
+        <div id="game-screen" class="screen flex flex-col items-center justify-start py-8 px-4">
+            
+            <!-- Game Info Bar -->
+            <div id="game-info" class="game-status-box flex justify-between w-full max-w-4xl mb-4">
+                <span class="text-xl font-semibold">Score: <span id="current-score">0</span></span>
+                <span class="text-xl font-semibold text-yellow-400">High Score: <span id="high-score">0</span></span>
+                <span class="text-xl font-semibold text-yellow-400">💰 Coins: <span id="coin-count">0</span></span>
+            </div>
 
-        /** Handles purchasing an upgrade using a Firestore transaction. */
-        async function buyUpgrade(upgradeKey, cost) {
-            if (!db || !userId || !isAuthReady) return;
+            <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
 
-            const userProfilePath = `/artifacts/${appId}/users/${userId}/gameData/profile`;
-            const docRef = doc(db, userProfilePath);
-            const upgradeName = UPGRADES.find(u => u.key === upgradeKey)?.name || 'Item';
+            <div id="game-controls" class="mt-6 flex flex-wrap justify-center gap-4">
+                <button onclick="player.jump()" id="jump-button" 
+                        class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">
+                    JUMP (or Tap Screen)
+                </button>
+                
+                <!-- Hacker Ability Button -->
+                <button id="hacker-button" onclick="activateHackerAbility()"
+                        class="main-button bg-purple-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" 
+                        disabled>
+                    <div id="hacker-cooldown-overlay" 
+                         class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" 
+                         style="height: 100%;"></div>
+                    
+                    <span id="hacker-cooldown-text" 
+                          class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">
+                          BUY IN SHOP
+                    </span>
+                </button>
 
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnapshot = await transaction.get(docRef);
+                <!-- Time Ability Button -->
+                <button id="time-button" onclick="activateTimeAbility()"
+                        class="main-button bg-blue-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" 
+                        disabled>
+                    <div id="time-cooldown-overlay" 
+                         class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" 
+                         style="height: 100%;"></div>
+                    
+                    <span id="time-cooldown-text" 
+                          class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">
+                          BUY TIME
+                    </span>
+                </button>
+                
+                <!-- Restart Button -->
+                <button onclick="startGame()" 
+                        class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">
+                    Restart Game
+                </button>
 
-                    if (!docSnapshot.exists()) throw new Error("User profile not found.");
+                <button onclick="goToScreen('menu')" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">
+                    &larr; Quit
+                </button>
+            </div>
 
-                    const data = docSnapshot.data();
-                    const currentCoins = data.coins || 0;
-                    const currentUpgrades = data.upgrades || {};
-
-                    if (currentUpgrades[upgradeKey]) throw new Error(`You already own the ${upgradeName} upgrade!`);
-                    if (currentCoins < cost) throw new Error("Not enough coins!");
-
-                    transaction.update(docRef, {
-                        coins: currentCoins - cost,
-                        [`upgrades.${upgradeKey}`]: true,
-                    });
-
-                    showNotification(`${upgradeName} purchased!`);
-                });
-            } catch (e) {
-                showNotification(e.message || "Purchase failed.", 3000);
-                console.error("Transaction failed:", e);
-            }
-        }
-
-        /** Handles collecting coins in the game simulation. */
-        async function collectCoin() {
-            if (!db || !userId) return;
-            const docRef = doc(db, `/artifacts/${appId}/users/${userId}/gameData/profile`);
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnapshot = await transaction.get(docRef);
-                    const currentCoins = docSnapshot.data()?.coins || 0;
-                    transaction.update(docRef, { coins: currentCoins + COIN_VALUE });
-                    showNotification(`Collected ${COIN_VALUE} Coins! 💰`, 1000);
-                });
-            } catch (e) {
-                console.error("Failed to collect coin:", e);
-            }
-        }
-
-
-        // --- UI SCREENS ---
-
-        /** Renders the Main Menu. */
-        function MenuScreen() {
-            return `
-                <div class="flex flex-col items-center justify-center p-8 bg-white/90 rounded-3xl shadow-2xl backdrop-blur-sm">
-                    <h1 class="text-4xl sm:text-6xl font-extrabold text-gray-800 mb-10 text-center tracking-tight">
-                        Adventures of Bob the Stickman
-                    </h1>
-                    ${NavButton("▶️ Play Game", "updateState({ currentView: 'game' })")}
-                    ${NavButton("🛍️ Shop", "updateState({ currentView: 'shop' })", 'secondary')}
-                    <p class="mt-6 text-sm text-gray-500">
-                        Current User: <span class="font-mono text-gray-600 truncate max-w-xs block">${userId || 'Loading...'}</span>
-                    </p>
-                </div>
-            `;
-        }
-
-        /** Renders a single upgrade item for the shop. */
-        function UpgradeItem(upgrade) {
-            const isOwned = ownedUpgrades[upgrade.key];
-            const canAfford = coins >= upgrade.cost;
-            let buttonText, buttonClass, action;
-
-            if (isOwned) {
-                buttonText = "Owned";
-                buttonClass = "bg-gray-400 cursor-not-allowed";
-                action = 'void(0)';
-            } else if (canAfford) {
-                buttonText = 'Buy (' + upgrade.cost + ' Coins)';
-                buttonClass = "bg-primary-500 hover:bg-primary-600";
-                action = `buyUpgrade('${upgrade.key}', ${upgrade.cost})`;
-            } else {
-                buttonText = 'Need ' + (upgrade.cost - coins) + ' More';
-                buttonClass = "bg-red-500 opacity-70 cursor-not-allowed";
-                action = 'void(0)';
-            }
-
-            return `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b border-gray-200 last:border-b-0">
-                    <div class="flex items-start mb-2 sm:mb-0">
-                        <span class="text-3xl mr-4">${upgrade.icon}</span>
-                        <div>
-                            <p class="font-bold text-gray-800">${upgrade.name}</p>
-                            <p class="text-sm text-gray-500">${upgrade.description}</p>
-                        </div>
-                    </div>
-                    <button onclick="${action}"
-                        ${isOwned || !canAfford ? 'disabled' : ''}
-                        class="px-4 py-2 text-sm font-semibold text-white rounded-lg transition duration-150 ${buttonClass}">
-                        ${buttonText}
+             <!-- Game Over Modal -->
+            <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
+                <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
+                    <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
+                    <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
+                    <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">
+                        Try Again!
                     </button>
                 </div>
-            `;
-        }
+            </div>
+        </div>
 
-        /** Renders the Shop Screen. */
-        function ShopScreen() {
-            const upgradesList = UPGRADES.map(UpgradeItem).join('');
-
-            return `
-                <div class="flex flex-col items-center p-8 bg-white/90 rounded-3xl shadow-2xl backdrop-blur-sm w-full max-w-2xl">
-                    <h1 class="text-4xl font-bold text-gray-800 mb-4">The Stickman Shop</h1>
-                    <p class="text-3xl font-mono text-yellow-600 mb-6 font-extrabold">
-                        💰 Coins: ${coins}
-                    </p>
-
-                    <h2 class="text-2xl font-extrabold text-gray-700 mt-4 mb-4 self-start border-b-2 border-primary-500 pb-1 w-full">
-                        ⬆️ Upgrades
-                    </h2>
-                    <div class="w-full bg-gray-50 rounded-lg shadow-inner divide-y divide-gray-200">
-                        ${upgradesList}
-                    </div>
-
-                    <h2 class="text-2xl font-extrabold text-gray-700 mt-8 mb-4 self-start border-b-2 border-primary-500 pb-1 w-full">
-                        🎨 Skins
-                    </h2>
-                    <div class="w-full bg-gray-50 rounded-lg shadow-inner p-4 text-center text-gray-500">
-                        Skin selection feature coming soon! You currently have the default skin.
-                    </div>
-
-                    <button onclick="updateState({ currentView: 'menu' })"
-                        class="mt-8 px-6 py-3 bg-secondary-500 hover:bg-secondary-600 text-white font-semibold rounded-lg shadow-md transition duration-150 ease-in-out">
-                        ◀️ Back to Menu
-                    </button>
-                </div>
-            `;
-        }
-
-        /** Renders the Game Screen simulation. */
-        function GameScreen() {
-            const activeUpgrade = UPGRADES.find(u => u.key === activePowerUp);
-            const activeUpgradeName = activeUpgrade ? activeUpgrade.name : 'None';
-            const isPowerUpActive = activePowerUp !== null;
-            const isPowerUpAvailable = Object.keys(ownedUpgrades).some(key => ownedUpgrades[key]);
-
-            // Determine the appearance of Bob based on the active power-up
-            let bobText = "Bob";
-            let bobColor = '10b981'; // Green
-            let bobStyle = '';
+        <!-- 3. SHOP SCREEN -->
+        <div id="shop-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
+            <h2 class="text-5xl font-bold text-[#e94560] mb-8">
+                The Item Shop
+            </h2>
+            <p class="text-xl mb-4 text-center max-w-lg">
+                💰 Your Coins: <span id="shop-coin-count" class="font-bold text-yellow-400">0</span>
+                | High Score: <span id="shop-high-score" class="font-bold text-yellow-400">0</span>
+            </p>
+            <p class="text-lg mb-8 text-center max-w-lg">
+                Spend your hard-earned coins on upgrades! Passive abilities are active the entire game.
+            </p>
             
-            if (activePowerUp === 'invisible') {
-                bobText = "Invisible Bob";
-                bobColor = 'f87171'; // Red
-                bobStyle = 'opacity-50 ring-4 ring-red-500';
-            } else if (activePowerUp === 'disappearObstacle') {
-                bobText = "Bob: Smash!";
-                bobColor = '3b82f6'; // Blue
-                bobStyle = 'ring-4 ring-blue-500 animate-pulse';
-            }
-
-            const coinVisibility = isCoinAvailable ? 'block' : 'hidden';
-            
-            return `
-                <div class="flex flex-col items-center p-8 bg-white/90 rounded-3xl shadow-2xl backdrop-blur-sm w-full max-w-lg">
-                    <h1 class="text-4xl font-bold text-gray-800 mb-6">Game Running...</h1>
-                    <p class="text-2xl font-mono text-yellow-600 mb-4 font-extrabold">
-                        💰 Coins: ${coins}
-                    </p>
-
-                    <!-- Power-Up Status -->
-                    <div class="p-4 rounded-lg w-full text-center mb-6 transition duration-500 border-4 ${
-                        isPowerUpActive ? 'bg-red-200 border-red-500' : 'bg-gray-100 border-gray-300'
-                    }">
-                        <p class="text-sm font-semibold text-gray-700">
-                            ${isPowerUpActive ? 'Power-Up Active!' : 'Active Power-Up:'}
-                        </p>
-                        <p class="text-xl font-bold text-red-700">${activeUpgradeName}</p>
+            <!-- Upgrades Container -->
+            <div class="w-full max-w-2xl space-y-6">
+                
+                <!-- Time Ability Card (Active Ability) -->
+                <div class="shop-card p-6 border-2 border-[#1c305c]">
+                    <h3 class="text-3xl font-bold mb-4 text-blue-400">Time Warp Ability (Active)</h3>
+                    <div class="bg-[#203463] p-4 rounded-lg">
+                        <p class="text-2xl font-bold">Temporal Slowdown (T)</p>
+                        <p class="text-lg text-gray-300 mb-2">Temporarily slows the entire game.</p>
+                        <p class="text-lg">Level: <span id="time-level" class="font-bold text-green-400">0</span></p>
+                        <p class="text-sm mt-1" id="time-effect">Effect: Not yet purchased.</p>
+                        <p class="text-sm mt-2 font-semibold text-red-300" id="time-req"></p>
                     </div>
-
-                    <!-- Activation Prompt -->
-                    <p class="text-xl font-bold p-3 rounded-lg border-2 mb-8 ${isPowerUpAvailable && !isPowerUpActive ? 'text-primary-700 bg-primary-100 border-primary-300' : 'text-gray-400 bg-gray-200 border-gray-300'}">
-                        ${isPowerUpAvailable && !isPowerUpActive ? 
-                            '<span>Press <kbd>B</kbd> to Activate Power-Up!</span>' : 
-                            isPowerUpActive ? 
-                            '<span>Power-Up is currently active!</span>' : 
-                            '<span>Buy an upgrade in the shop to use this!</span>'
-                        }
-                    </p>
-
-                    <!-- GAME SIMULATION AREA -->
-                    <div class="w-full h-40 bg-gray-900 border-8 border-gray-600 rounded-lg relative overflow-hidden mb-8 shadow-inner game-simulation"
-                         style="background-image: repeating-linear-gradient(90deg, #1f2937 0px, #1f2937 40px, #2a3541 40px, #2a3541 80px);">
-                        <!-- Floor -->
-                        <div class="absolute inset-x-0 bottom-0 h-4 bg-gray-500"></div>
-
-                        <!-- Bob the Stickman - running/jumping area -->
-                        <img
-                            src="https://placehold.co/60x60/${bobColor}/ffffff?text=${bobText.replace(/ /g, '+')}"
-                            alt="Bob the Stickman"
-                            class="absolute left-4 bottom-0 transform -translate-y-1/2 rounded-full shadow-md transition-all duration-500 ${bobStyle}"
-                            style="height: 60px; width: 60px; bottom: 1rem;"
-                        />
-                        
-                        <!-- Collectible Coin - Click to simulate collection -->
-                        <div 
-                            onclick="handleCoinCollectionClick()"
-                            class="absolute right-8 top-1/2 transform -translate-y-1/2 text-4xl cursor-pointer hover:scale-125 transition-transform duration-200 z-10 ${coinVisibility}"
-                        >
-                            🟡
-                        </div>
-                        
-                        <!-- Obstacle Placeholder -->
-                        <div class="absolute right-20 bottom-0 h-10 w-8 bg-red-600 rounded-sm" style="bottom: 1rem; animation: obstacle1 4s linear infinite;"></div>
-                        <div class="absolute right-40 bottom-0 h-6 w-12 bg-red-800 rounded-sm" style="bottom: 1rem; animation: obstacle2 5s linear infinite;"></div>
-                        
-                        <style>
-                            @keyframes obstacle1 { 0% { right: -10%; } 100% { right: 100%; } }
-                            @keyframes obstacle2 { 0% { right: -20%; } 100% { right: 100%; } }
-                        </style>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full justify-center">
-                        <button onclick="updateState({ currentView: 'menu' })"
-                            class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-lg transition duration-150 ease-in-out w-full sm:w-auto">
-                            ◀️ Back to Menu
+                    <div class="flex justify-between items-center mt-4">
+                        <p id="time-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
+                        <button id="buy-time-button" onclick="buyUpgrade('time')" 
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            Buy
                         </button>
                     </div>
                 </div>
-            `;
-        }
 
+                <!-- Hacker Upgrade Card (Active Ability) -->
+                <div class="shop-card p-6 border-2 border-[#1c305c]">
+                    <h3 class="text-3xl font-bold mb-4 text-purple-400">Hacker Ability (Active)</h3>
+                    <div class="bg-[#203463] p-4 rounded-lg">
+                        <p class="text-2xl font-bold">Obstacle Bypass (X)</p>
+                        <p class="text-lg text-gray-300 mb-2">Instantly bypass one obstacle on command.</p>
+                        <p class="text-lg">Level: <span id="hacker-level" class="font-bold text-green-400">0</span></p>
+                        <p class="text-sm mt-1" id="hacker-effect">Effect: Not yet purchased.</p>
+                        <p class="text-sm mt-2 font-semibold text-red-300" id="hacker-req"></p>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <p id="hacker-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
+                        <button id="buy-hacker-button" onclick="buyUpgrade('hacker')" 
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            Buy
+                        </button>
+                    </div>
+                </div>
 
-        // --- MAIN RENDER LOOP & EVENT LISTENERS ---
+                <!-- Jump Upgrade Card (Passive) -->
+                <div class="shop-card p-6 border-2 border-[#1c305c]">
+                    <h3 class="text-3xl font-bold mb-4 text-green-400">Jump Upgrade (Passive)</h3>
+                    <div class="bg-[#203463] p-4 rounded-lg">
+                        <p class="text-2xl font-bold">Multi-Jump Capability</p>
+                        <p class="text-lg text-gray-300 mb-2">Jump additional times mid-air before landing.</p>
+                        <p class="text-lg">Level: <span id="jump-level" class="font-bold text-green-400">0</span></p>
+                        <p class="text-sm mt-1" id="jump-effect">Effect: Standard single jump.</p>
+                         <p class="text-sm mt-2 font-semibold text-red-300" id="jump-req"></p>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <p id="jump-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
+                        <button id="buy-jump-button" onclick="buyUpgrade('jump')" 
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            Buy
+                        </button>
+                    </div>
+                </div>
 
-        /** The main rendering function, called after every state change. */
-        function renderApp() {
-            // Update internal state variables from window.gameData (to match React component structure)
-            coins = window.gameData.coins;
-            ownedUpgrades = window.gameData.ownedUpgrades;
-            activePowerUp = window.gameData.activePowerUp;
-            notification = window.gameData.notification;
-            currentView = window.gameData.currentView;
-            isCoinAvailable = window.gameData.isCoinAvailable;
+                <!-- Money Magnet Upgrade Card (Passive) -->
+                <div class="shop-card p-6 border-2 border-[#1c305c]">
+                    <h3 class="text-3xl font-bold mb-4 text-yellow-400">Money Magnet (Passive)</h3>
+                    <div class="bg-[#203463] p-4 rounded-lg">
+                        <p class="text-2xl font-bold">Coin Attraction Field</p>
+                        <p class="text-lg text-gray-300 mb-2">Attracts coins towards you and increases their value.</p>
+                        <p class="text-lg">Level: <span id="magnet-level" class="font-bold text-green-400">0</span></p>
+                        <p class="text-sm mt-1" id="magnet-effect">Effect: No magnet. Collect coins normally (1 coin value).</p>
+                        <p class="text-sm mt-2 font-semibold text-red-300" id="magnet-req"></p>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <p id="magnet-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
+                        <button id="buy-magnet-button" onclick="buyUpgrade('magnet')" 
+                                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            Buy
+                        </button>
+                    </div>
+                </div>
 
-            let html = '';
-            switch (currentView) {
-                case 'game':
-                    html = GameScreen();
-                    break;
-                case 'shop':
-                    html = ShopScreen();
-                    break;
-                case 'menu':
-                default:
-                    html = MenuScreen();
-                    break;
-            }
-            appElement.innerHTML = html;
+            </div>
+            
+            <button onclick="goToScreen('menu')" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">
+                &larr; Back to Menu
+            </button>
+        </div>
+    </div>
 
-            // Re-render Notification separately to avoid content flash
-            let notificationEl = document.getElementById('notification-area');
-            if (!notificationEl) {
-                notificationEl = document.createElement('div');
-                notificationEl.id = 'notification-area';
-                document.body.appendChild(notificationEl);
-            }
-            notificationEl.className = notification ? 
-                'fixed top-4 left-1/2 -translate-x-1/2 p-3 bg-yellow-400 text-gray-800 font-bold rounded-lg shadow-xl z-50 transition-opacity duration-300' :
-                'hidden';
-            notificationEl.innerHTML = notification;
-        }
+    <script>
+        // =======================================================
+        // MENU NAVIGATION LOGIC
+        // =======================================================
         
-        // Expose state update and coin collection for use in inline HTML handlers
-        window.updateState = updateState;
+        let currentScreen = 'menu';
+        let animationFrameId = null; 
+        let lastTime = 0; 
 
-        // Separate function for coin collection handling (needs to update local state immediately)
-        window.handleCoinCollectionClick = () => {
-            if (isCoinAvailable) {
-                collectCoin(); // Calls Firestore transaction
-                updateState({ isCoinAvailable: false });
-                
-                // Simulate the coin respawning after running a bit (2 seconds)
-                setTimeout(() => {
-                    updateState({ isCoinAvailable: true });
-                }, 2000); 
-            }
+        const screens = {
+            menu: document.getElementById('menu-screen'),
+            game: document.getElementById('game-screen'),
+            shop: document.getElementById('shop-screen')
         };
+        const gameOverModal = document.getElementById('game-over-modal');
 
+        /**
+         * Switches the visibility of the screens based on the target name.
+         * @param {string} targetScreen - The ID suffix of the screen to show ('menu', 'game', 'shop').
+         */
+        function goToScreen(targetScreen) {
+            if (currentScreen === targetScreen) return; 
 
-        // Power Up Activation Key Listener
-        window.addEventListener('keydown', (event) => {
-            if (currentView === 'game' && event.key.toLowerCase() === 'b' && activePowerUp === null) {
-                const availableUpgrade = UPGRADES.find(u => ownedUpgrades[u.key]);
+            // Stop the game if we are leaving the game screen
+            if (currentScreen === 'game') {
+                stopGame();
+            }
+
+            // Hide all screens
+            Object.values(screens).forEach(screen => {
+                if (screen) screen.style.display = 'none';
+            });
+
+            // Show the target screen
+            if (screens[targetScreen]) {
+                screens[targetScreen].style.display = 'flex';
+                currentScreen = targetScreen;
                 
-                if (availableUpgrade) {
-                    updateState({ activePowerUp: availableUpgrade.key });
-                    showNotification(`${availableUpgrade.name} Activated! (5s)`);
-
-                    // Set a timer for power-up duration
-                    setTimeout(() => {
-                        updateState({ activePowerUp: null });
-                        showNotification('Power-up faded.', 1500);
-                    }, POWER_UP_DURATION_MS);
-                } else {
-                    showNotification("No power-up owned or ready!", 1500);
+                // Start the game if we are entering the game screen
+                if (targetScreen === 'game') {
+                    // Set canvas size initially
+                    resizeCanvas(); 
+                    startGame();
+                } else if (targetScreen === 'shop') {
+                    // Update the shop UI when entering the screen
+                    updateShopUI();
                 }
+            } else {
+                console.error(`Attempted to navigate to unknown screen: ${targetScreen}`);
+            }
+        }
+
+        // Initialize the app to the main menu screen
+        window.onload = () => {
+            goToScreen('menu'); 
+        };
+        
+        // Listen for screen resize to keep canvas responsive
+        window.addEventListener('resize', () => {
+             if (currentScreen === 'game') {
+                resizeCanvas();
             }
         });
 
 
-        // --- FIREBASE INITIALIZATION ---
+        // =======================================================
+        // STICKMAN JUMPER GAME LOGIC
+        // =======================================================
 
-        window.onload = function() {
-            // Initialize global state container
-            window.gameData = {
-                coins: 0,
-                ownedUpgrades: {},
-                activePowerUp: null,
-                notification: '',
-                currentView: 'menu',
-                isCoinAvailable: true
-            };
-            
-            // Firebase setup
-            setLogLevel('error');
-            if (Object.keys(firebaseConfig).length === 0) {
-                console.error("Firebase configuration is missing.");
-                renderApp(); // Render basic UI even if Firebase fails
-                return;
-            }
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game Constants
+        const GRAVITY = 0.6;
+        const JUMP_VELOCITY = -12;
+        const BASE_GAME_SPEED = 4.0; 
+        const MAX_GAME_SPEED_INCREASE = 3.0; 
+        const MAX_SCORE_FOR_SPEED = 800; // Max speed reached at UI Score 800
+        const MAX_SCORE_FOR_OBSTACLE_DENSITY = 1000; // Max density reached at UI Score 1000
+        const GROUND_HEIGHT = 50;
+        const PLAYER_SIZE = 40; 
+        const magnetForce = 0.025; 
 
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+        // Game State (Persistent via LocalStorage)
+        let player;
+        let obstacles = [];
+        let coins = []; 
+        let holes = []; // New array for hole obstacles
+        let score = 0; 
+        let currentSpeed = BASE_GAME_SPEED; 
+        
+        let highScore = parseInt(localStorage.getItem('stickmanHighScore') || '0', 10); 
+        let playerCoins = parseInt(localStorage.getItem('stickmanCoins') || '0', 10); 
+        
+        // --- UPGRADE LEVELS (Stored in localStorage) ---
+        let timeLevel = parseInt(localStorage.getItem('timeLevel') || '0', 10);
+        let hackerLevel = parseInt(localStorage.getItem('hackerLevel') || '0', 10); 
+        let jumpLevel = parseInt(localStorage.getItem('jumpLevel') || '0', 10);
+        let magnetLevel = parseInt(localStorage.getItem('magnetLevel') || '0', 10);
+        
+        // --- GAME MECHANIC STATE ---
+        let jumpCount = 0; 
+        let isFalling = false; // New state for falling animation
+        
+        // Hacker State
+        let isHackerAbilityReady = true;
+        let hackerCooldownRemaining = 0; // ms
+        
+        // Time State
+        let isTimeAbilityReady = true;
+        let timeCooldownRemaining = 0; // ms
+        let timeEffectRemaining = 0; // ms
+        let speedBeforeTimeWarp = BASE_GAME_SPEED; 
+        
+        let isGameOver = false;
+        let obstacleSpawnTimer = 0;
+        let coinSpawnTimer = 0; 
+        let obstacleSpawnRate = 120; 
+        const COIN_SPAWN_RATE = 350; 
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                    } else {
-                        let anonUser;
-                        if (initialAuthToken) {
-                            anonUser = await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            anonUser = await signInAnonymously(auth);
-                        }
-                        userId = anonUser.user.uid;
-                    }
-                    isAuthReady = true;
-
-                    // Start Firestore Listener after Auth is ready
-                    const userProfilePath = `/artifacts/${appId}/users/${userId}/gameData/profile`;
-                    const docRef = doc(db, userProfilePath);
-
-                    const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
-                        if (docSnapshot.exists()) {
-                            const data = docSnapshot.data();
-                            updateState({
-                                coins: data.coins || 0,
-                                ownedUpgrades: data.upgrades || {},
-                            });
-                        } else {
-                            setupUserData(docRef); // Create data if it doesn't exist
-                        }
-                    }, (error) => {
-                        console.error("Firestore subscription error:", error);
-                    });
-
-                    // Initial render once auth is complete
-                    renderApp(); 
-                });
-
-            } catch (e) {
-                console.error("Firebase initialization failed:", e);
-                renderApp();
+        // --- UPGRADE DATA (Unchanged) ---
+        const TIME_UPGRADE = {
+            stateKey: 'timeLevel',
+            costs: [12, 20, 30], 
+            cooldowns: [30000, 20000, 35000], 
+            highScoreRequirement: [0, 0, 0], 
+            effectDuration: [4000, 5000, 6000], 
+            slowdownFactor: [0.7, 0.5, 'BASE'], 
+            maxLevel: 3,
+            effect: (level) => {
+                 if (level === 0) return 'Not yet purchased.';
+                 const cd = TIME_UPGRADE.cooldowns[level - 1] / 1000;
+                 if (level === 3) return `Cooldown: ${cd} seconds. Resets speed to base for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
+                 const factor = TIME_UPGRADE.slowdownFactor[level-1];
+                 return `Cooldown: ${cd} seconds. Slows speed to ${Math.floor(factor * 100)}% for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
             }
         };
 
+        const HACKER_UPGRADE = {
+            stateKey: 'hackerLevel',
+            costs: [10, 25, 40], 
+            cooldowns: [9000, 6000, 3000],
+            highScoreRequirement: [200, 400, 600], 
+            maxLevel: 3,
+            effect: (level) => {
+                 if (level === 0) return 'Not yet purchased.';
+                 const cd = HACKER_UPGRADE.cooldowns[level - 1] / 1000;
+                 return `Cooldown: ${cd} seconds. Bypasses 1 obstacle per use.`;
+            }
+        };
+        const JUMP_UPGRADE = {
+            stateKey: 'jumpLevel',
+            costs: [10, 40],
+            highScoreRequirement: [200, 450], 
+            maxLevels: [2, 3], 
+            maxLevel: 2,
+            effect: (level) => {
+                if (level === 0) return 'Standard single jump.';
+                if (level === 1) return `Effect: Double Jump (${JUMP_UPGRADE.maxLevels[0]} jumps allowed).`;
+                if (level === 2) return `Effect: Triple Jump (${JUMP_UPGRADE.maxLevels[1]} jumps allowed).`;
+            }
+        };
+        const MAGNET_UPGRADE = {
+            stateKey: 'magnetLevel',
+            costs: [10, 40],
+            highScoreRequirement: [100, 200], 
+            values: [10, 18], 
+            radii: [150, 300],
+            maxLevel: 2,
+            effect: (level) => {
+                if (level === 0) return 'Effect: No magnet. Collect coins normally (1 coin value).';
+                if (level === 1) return `Effect: Overhead Magnet. Value: ${MAGNET_UPGRADE.values[0]} coins.`;
+                if (level === 2) return `Effect: Universal Magnet. Value: ${MAGNET_UPGRADE.values[1]} coins.`;
+            }
+        };
+        
+        const UPGRADES = {
+            time: TIME_UPGRADE,
+            hacker: HACKER_UPGRADE,
+            jump: JUMP_UPGRADE,
+            magnet: MAGNET_UPGRADE
+        };
+
+
+        // UI Elements
+        const scoreElement = document.getElementById('current-score');
+        const highScoreElement = document.getElementById('high-score');
+        const finalScoreElement = document.getElementById('final-score');
+        const coinCountElement = document.getElementById('coin-count'); 
+        
+        // UI Elements for Shop
+        const shopCoinCountElement = document.getElementById('shop-coin-count');
+        const shopHighScoreElement = document.getElementById('shop-high-score');
+        
+        // Ability UI
+        const hackerButton = document.getElementById('hacker-button');
+        const hackerCooldownOverlay = document.getElementById('hacker-cooldown-overlay');
+        const hackerCooldownText = document.getElementById('hacker-cooldown-text');
+        
+        const timeButton = document.getElementById('time-button');
+        const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
+        const timeCooldownText = document.getElementById('time-cooldown-text');
+        
+        // Update initial displays
+        highScoreElement.textContent = highScore;
+        coinCountElement.textContent = playerCoins;
+
+        // Player Class (minimal update, position handled in main loop)
+        class Player {
+            constructor() {
+                this.width = PLAYER_SIZE / 2;
+                this.height = PLAYER_SIZE;
+                this.x = 50;
+                this.y = canvas.height - GROUND_HEIGHT - this.height;
+                this.velocityY = 0;
+            }
+
+            jump() {
+                if (!isGameOver && !isFalling) {
+                    let maxJumps = 1;
+                    if (jumpLevel === 1) maxJumps = JUMP_UPGRADE.maxLevels[0];
+                    if (jumpLevel === 2) maxJumps = JUMP_UPGRADE.maxLevels[1];
+
+                    if (jumpCount < maxJumps) { 
+                        this.velocityY = JUMP_VELOCITY;
+                        jumpCount++;
+                    }
+                }
+            }
+
+            draw() {
+                // Stickman drawing logic 
+                ctx.strokeStyle = '#FFFFFF'; 
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Body
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + 10);
+                ctx.lineTo(this.x + this.width / 2, this.y + 25);
+                ctx.stroke();
+
+                // Arms
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + 15);
+                ctx.lineTo(this.x + this.width, this.y + 15);
+                ctx.stroke();
+
+                // Legs
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + 25);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.moveTo(this.x + this.width / 2, this.y + 25);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.stroke();
+            }
+        }
+
+        // Coin Class (unchanged)
+        class Coin {
+            constructor() {
+                this.size = 15;
+                this.x = canvas.width;
+                this.color = '#FFD700';
+                this.baseValue = 1; 
+                
+                this.isMagnetized = false; 
+                this.magnetSpeedX = 0;
+                this.magnetSpeedY = 0;
+
+                const level = Math.floor(Math.random() * 3);
+                
+                if (level === 0) {
+                    this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
+                } else if (level === 1) {
+                    this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
+                } else {
+                    this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
+                }
+            }
+
+            update() {
+                if (this.isMagnetized) {
+                    this.x += this.magnetSpeedX;
+                    this.y += this.magnetSpeedY;
+                }
+                
+                this.x -= currentSpeed;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                
+                if (this.isMagnetized) {
+                    ctx.shadowColor = '#FFD700';
+                    ctx.shadowBlur = 10;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+            }
+        }
+
+
+        // Obstacle Class (unchanged)
+        class Obstacle {
+            constructor(type) {
+                this.type = type;
+                this.width = 20 + Math.random() * 20;
+                this.defaultColor = type === 'ground' ? '#ff6b6b' : '#647DEE';
+                this.color = this.defaultColor;
+                this.isBypassed = false; 
+                
+                if (type === 'ground') {
+                    this.height = 20 + Math.random() * 30;
+                    this.x = canvas.width;
+                    this.y = canvas.height - GROUND_HEIGHT - this.height;
+                } else {
+                    this.height = 15;
+                    this.width = 40 + Math.random() * 30; 
+                    this.x = canvas.width;
+                    this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50; 
+                }
+            }
+
+            update() {
+                this.x -= currentSpeed;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                if (this.type === 'ground' && this.color === this.defaultColor) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                    ctx.fillRect(this.x, canvas.height - GROUND_HEIGHT, this.width, 10);
+                }
+            }
+        }
+        
+        // Hole Class (Updated for larger size)
+        class Hole {
+            constructor() {
+                // Increased width range from 50-100 to 75-150
+                this.width = 75 + Math.random() * 75; // Variable width
+                this.x = canvas.width;
+                this.y = canvas.height - GROUND_HEIGHT; // Starts at ground level
+                this.height = GROUND_HEIGHT; // Visual height for ground collision check
+                this.isHazard = true;
+            }
+
+            update() {
+                this.x -= currentSpeed;
+            }
+
+            draw() {
+                // Draw the hole as a dark gap on the ground
+                ctx.fillStyle = '#16213e'; // Match the game background color for a "hole" effect
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Add a simple visual rim or shadow for depth
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.width, this.y);
+                ctx.stroke();
+            }
+        }
+
+        // =======================================================
+        // ABILITY LOGIC (Unchanged)
+        // =======================================================
+
+        function activateHackerAbility() {
+            if (hackerLevel === 0 || !isHackerAbilityReady) return;
+            
+            isHackerAbilityReady = false;
+            
+            const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
+            hackerCooldownRemaining = currentCooldown;
+
+            // Hacker doesn't work on holes, only solid obstacles
+            const activeObstacles = obstacles.filter(obs => obs.x > player.x && !obs.isBypassed);
+
+            if (activeObstacles.length > 0) {
+                const targetObstacle = activeObstacles[0]; 
+                targetObstacle.isBypassed = true;
+                targetObstacle.color = '#059669'; 
+            }
+
+            updateHackerButtonUI();
+        }
+
+        function activateTimeAbility() {
+            if (timeLevel === 0 || !isTimeAbilityReady || isGameOver) return;
+            
+            isTimeAbilityReady = false;
+            
+            const currentCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
+            timeCooldownRemaining = currentCooldown;
+            
+            speedBeforeTimeWarp = currentSpeed; 
+
+            const factor = TIME_UPGRADE.slowdownFactor[timeLevel - 1];
+            if (factor === 'BASE') {
+                currentSpeed = BASE_GAME_SPEED;
+            } else {
+                currentSpeed *= factor; 
+            }
+            
+            timeEffectRemaining = TIME_UPGRADE.effectDuration[timeLevel - 1];
+
+            canvas.style.borderColor = '#60a5fa'; 
+            
+            updateTimeButtonUI();
+        }
+
+        // =======================================================
+        // UI UPDATE LOGIC (Unchanged)
+        // =======================================================
+
+        function updateHackerButtonUI() {
+            if (hackerLevel === 0) {
+                hackerButton.disabled = true;
+                hackerCooldownText.textContent = 'BUY IN SHOP';
+                hackerCooldownOverlay.style.height = '100%'; 
+                return;
+            }
+
+            if (isHackerAbilityReady) {
+                hackerButton.disabled = false;
+                hackerCooldownText.textContent = 'READY (X)'; 
+                hackerCooldownOverlay.style.height = '0%';
+                hackerButton.classList.remove('bg-gray-700');
+                hackerButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            } else {
+                hackerButton.disabled = true;
+                hackerButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                hackerButton.classList.add('bg-gray-700');
+                
+                const totalCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
+                const remainingSec = Math.ceil(hackerCooldownRemaining / 1000); 
+                const percent = (hackerCooldownRemaining / totalCooldown) * 100;
+
+                hackerCooldownText.textContent = `${remainingSec}s`;
+                hackerCooldownOverlay.style.height = `${percent}%`; 
+            }
+        }
+        
+        function updateTimeButtonUI() {
+            if (timeLevel === 0) {
+                timeButton.disabled = true;
+                timeCooldownText.textContent = 'BUY IN SHOP';
+                timeCooldownOverlay.style.height = '100%'; 
+                return;
+            }
+
+            if (timeEffectRemaining > 0) {
+                 timeButton.disabled = true;
+                 const remainingEffectSec = Math.ceil(timeEffectRemaining / 1000);
+                 timeCooldownText.textContent = `WARP: ${remainingEffectSec}s`;
+                 timeCooldownOverlay.style.height = '0%'; 
+                 timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-gray-700');
+                 timeButton.classList.add('bg-blue-800');
+                 return;
+            }
+
+
+            if (isTimeAbilityReady) {
+                timeButton.disabled = false;
+                timeCooldownText.textContent = 'READY (T)'; 
+                timeCooldownOverlay.style.height = '0%';
+                timeButton.classList.remove('bg-gray-700');
+                timeButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                timeButton.disabled = true;
+                timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                timeButton.classList.add('bg-gray-700');
+                
+                const totalCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
+                const remainingSec = Math.ceil(timeCooldownRemaining / 1000); 
+                const percent = (timeCooldownRemaining / totalCooldown) * 100;
+
+                timeCooldownText.textContent = `${remainingSec}s`;
+                timeCooldownOverlay.style.height = `${percent}%`; 
+            }
+        }
+
+
+        // Handle Player Input (Jump, Hacker, Time)
+        function handleInput() {
+            document.addEventListener('keydown', (e) => {
+                if (!isGameOver) {
+                    if (e.code === 'Space' || e.code === 'Enter') {
+                        player.jump();
+                    }
+                    if (e.key === 'x' || e.key === 'X') {
+                        activateHackerAbility();
+                    }
+                    if (e.key === 't' || e.key === 'T') {
+                        activateTimeAbility();
+                    }
+                }
+            });
+
+            document.getElementById('jump-button').addEventListener('click', () => {
+                if (!isGameOver) player.jump();
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!isGameOver) player.jump(); 
+            });
+        }
+
+        // =======================================================
+        // SHOP LOGIC (Unchanged)
+        // =======================================================
+
+        function buyUpgrade(upgradeName) {
+            const upgrade = UPGRADES[upgradeName];
+            const currentLevel = getUpgradeLevel(upgradeName);
+
+            if (currentLevel < upgrade.maxLevel) {
+                const cost = upgrade.costs[currentLevel];
+                const requiredScore = upgrade.highScoreRequirement[currentLevel];
+                
+                if (highScore < requiredScore) {
+                     console.warn(`Cannot buy. High Score of ${requiredScore} required.`);
+                     return;
+                }
+
+                if (playerCoins >= cost) {
+                    playerCoins -= cost;
+                    const newLevel = currentLevel + 1;
+                    
+                    setUpgradeLevel(upgradeName, newLevel);
+                    localStorage.setItem('stickmanCoins', playerCoins);
+                    
+                    coinCountElement.textContent = playerCoins; 
+                    updateShopUI(); 
+                    if (upgradeName === 'hacker') updateHackerButtonUI(); 
+                    if (upgradeName === 'time') updateTimeButtonUI(); 
+                }
+            }
+        }
+
+        function getUpgradeLevel(key) {
+            if (key === 'time') return timeLevel;
+            if (key === 'hacker') return hackerLevel;
+            if (key === 'jump') return jumpLevel;
+            if (key === 'magnet') return magnetLevel;
+            return 0;
+        }
+
+        function setUpgradeLevel(key, level) {
+            if (key === 'time') timeLevel = level;
+            if (key === 'hacker') hackerLevel = level;
+            if (key === 'jump') jumpLevel = level;
+            if (key === 'magnet') magnetLevel = level;
+            localStorage.setItem(UPGRADES[key].stateKey, level);
+        }
+
+        function updateShopUI() {
+            shopCoinCountElement.textContent = playerCoins; 
+            shopHighScoreElement.textContent = highScore;
+            
+            Object.keys(UPGRADES).forEach(key => {
+                const upgrade = UPGRADES[key];
+                const currentLevel = getUpgradeLevel(key);
+
+                const levelElement = document.getElementById(`${key}-level`);
+                const effectElement = document.getElementById(`${key}-effect`);
+                const costElement = document.getElementById(`${key}-cost`);
+                const buyButton = document.getElementById(`buy-${key}-button`);
+                const reqElement = document.getElementById(`${key}-req`);
+
+                
+                if (!levelElement || !buyButton) return;
+
+                levelElement.textContent = currentLevel;
+                effectElement.textContent = upgrade.effect(currentLevel);
+
+                if (currentLevel < upgrade.maxLevel) {
+                    const nextLevel = currentLevel + 1;
+                    const nextCost = upgrade.costs[currentLevel]; 
+                    const requiredScore = upgrade.highScoreRequirement[currentLevel];
+                    
+                    costElement.textContent = `Cost: ${nextCost} Coins`;
+                    buyButton.textContent = `Buy Level ${nextLevel}`;
+                    
+                    let canBuy = true;
+                    
+                    if (requiredScore > 0 && highScore < requiredScore) {
+                        reqElement.textContent = `Required High Score: ${requiredScore} points.`;
+                        reqElement.classList.remove('text-green-300');
+                        reqElement.classList.add('text-red-300');
+                        canBuy = false;
+                    } else {
+                        reqElement.textContent = requiredScore > 0 ? `High Score Requirement Met (${requiredScore} points)!` : `No High Score requirement.`;
+                        reqElement.classList.remove('text-red-300');
+                        reqElement.classList.add('text-green-300');
+                    }
+                    
+                    if (playerCoins < nextCost || !canBuy) {
+                        buyButton.disabled = true;
+                        if (playerCoins < nextCost) {
+                           buyButton.textContent = 'Not Enough Coins'; 
+                        } else if (!canBuy) {
+                             buyButton.textContent = 'Score Too Low';
+                        }
+                    } else {
+                        buyButton.disabled = false;
+                    }
+
+                } else {
+                    costElement.textContent = 'MAX LEVEL';
+                    buyButton.textContent = 'MAXED OUT';
+                    buyButton.disabled = true;
+                    reqElement.textContent = 'You have maxed out this upgrade.';
+                    reqElement.classList.remove('text-red-300');
+                    reqElement.classList.add('text-green-300');
+                }
+            });
+        }
+
+
+        // =======================================================
+        // GAME CONTROL LOOP
+        // =======================================================
+        
+        function startGame() {
+            stopGame(); 
+            
+            gameOverModal.style.display = 'none';
+            isGameOver = false;
+            score = 0;
+            obstacles = [];
+            coins = []; 
+            holes = []; // Reset holes
+            isFalling = false; // Reset falling state
+            obstacleSpawnTimer = 0;
+            obstacleSpawnRate = 120; 
+            coinSpawnTimer = 0; 
+            currentSpeed = BASE_GAME_SPEED; 
+            
+            // Reset ability state
+            jumpCount = 0;
+            isHackerAbilityReady = true;
+            hackerCooldownRemaining = 0;
+            isTimeAbilityReady = true;
+            timeCooldownRemaining = 0;
+            timeEffectRemaining = 0;
+            
+            updateHackerButtonUI();
+            updateTimeButtonUI();
+            
+            player = new Player();
+            resizeCanvas(); 
+            
+            canvas.style.borderColor = '#e94560'; 
+            
+            lastTime = 0; 
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function stopGame() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function gameLoop(currentTime) {
+            if (!lastTime) {
+                lastTime = currentTime;
+            }
+            const deltaTime = Math.min(currentTime - lastTime, 100); 
+            lastTime = currentTime;
+
+            if (isGameOver) {
+                stopGame();
+                return;
+            }
+
+            update(deltaTime);
+            draw();
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Updates all game objects and state
+        function update(deltaTime) {
+            const uiScore = Math.floor(score / 10);
+            const groundY = canvas.height - GROUND_HEIGHT - player.height;
+
+            // --- 1. Speed Calculation (Difficulty Curve) ---
+            // Max speed reached at UI Score 800
+            const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
+            let calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
+            
+            if (timeEffectRemaining <= 0) {
+                 currentSpeed = calculatedSpeed; 
+                 canvas.style.borderColor = '#e94560'; 
+            }
+            
+            // --- 2. Cooldown and Effect Management (Time-based) ---
+            
+            if (hackerCooldownRemaining > 0) {
+                hackerCooldownRemaining -= deltaTime;
+                if (hackerCooldownRemaining <= 0) {
+                    hackerCooldownRemaining = 0;
+                    isHackerAbilityReady = true;
+                }
+                updateHackerButtonUI();
+            }
+            
+            if (timeCooldownRemaining > 0) {
+                timeCooldownRemaining -= deltaTime;
+                if (timeCooldownRemaining <= 0) {
+                    timeCooldownRemaining = 0;
+                    isTimeAbilityReady = true;
+                }
+                updateTimeButtonUI();
+            }
+
+            if (timeEffectRemaining > 0) {
+                timeEffectRemaining -= deltaTime;
+                if (timeEffectRemaining <= 0) {
+                    timeEffectRemaining = 0;
+                    currentSpeed = calculatedSpeed; 
+                }
+                updateTimeButtonUI();
+            }
+
+
+            // --- 3. Player Movement and Falling Logic ---
+            
+            if (!isFalling) {
+                // Apply normal gravity
+                player.velocityY += GRAVITY;
+                player.y += player.velocityY;
+
+                // Check if player is on the ground
+                if (player.y >= groundY) { 
+                    
+                    let fallingIntoHole = false;
+                    // Check for overlap with any active hole
+                    for (const hole of holes) {
+                        if (
+                            player.x + player.width > hole.x && 
+                            player.x < hole.x + hole.width
+                        ) {
+                            // Player is grounded and above a hole -> Start falling!
+                            fallingIntoHole = true;
+                            break;
+                        }
+                    }
+
+                    if (fallingIntoHole) {
+                        isFalling = true;
+                        player.velocityY = 0; // Start fresh velocity for falling
+                    } else {
+                        // Normal ground collision
+                        player.y = groundY;
+                        player.velocityY = 0;
+                        jumpCount = 0; 
+                    }
+                }
+            } else {
+                // FALLING STATE
+                player.velocityY += GRAVITY * 3; // Faster fall speed
+                player.y += player.velocityY;
+
+                // Check if fallen past the screen
+                if (player.y > canvas.height + 50) { 
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // --- 4. Game Object and Spawning Updates ---
+            
+            score += 1; 
+            scoreElement.textContent = uiScore;
+            
+            // Obstacle Spawning Rate (Max density reached at UI Score 1000)
+            const initialRate = 120;
+            const minRate = 50; 
+            const maxScoreForDifficulty = MAX_SCORE_FOR_OBSTACLE_DENSITY; 
+
+            const difficultyFactor = Math.min(uiScore / maxScoreForDifficulty, 1);
+            const rateReduction = (initialRate - minRate) * difficultyFactor; 
+            
+            obstacleSpawnRate = initialRate - rateReduction;
+            
+            obstacleSpawnTimer++;
+            if (obstacleSpawnTimer >= obstacleSpawnRate) {
+                // 15% chance to spawn a hole instead of a regular obstacle
+                if (Math.random() < 0.15) { 
+                    holes.push(new Hole());
+                } else {
+                    const type = Math.random() < 0.7 ? 'ground' : 'air'; 
+                    obstacles.push(new Obstacle(type));
+                }
+                obstacleSpawnTimer = 0;
+            }
+            
+            // Coin Spawning
+            coinSpawnTimer++;
+            if (coinSpawnTimer >= COIN_SPAWN_RATE) {
+                if (Math.random() < 0.6) { 
+                    coins.push(new Coin());
+                }
+                coinSpawnTimer = 0;
+            }
+
+
+            // --- 5. Magnet, Collision, and Cleanup ---
+            
+            if (magnetLevel > 0) {
+                const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
+                coins.forEach(coin => {
+                    const dx = (player.x + player.width / 2) - (coin.x + coin.size / 2);
+                    const dy = (player.y + player.height / 2) - (coin.y + coin.size / 2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    coin.isMagnetized = false;
+                    
+                    if (distance < magnetRadius) {
+                        let shouldMagnetize = false;
+                        const isOverheadX = (coin.x + coin.size > player.x) && (coin.x < player.x + player.width);
+                        const isHigherY = coin.y < player.y + player.height / 2;
+
+                        if (magnetLevel === 1 && isOverheadX && isHigherY) {
+                            shouldMagnetize = true;
+                        } else if (magnetLevel === 2) {
+                            shouldMagnetize = true;
+                        }
+
+                        if (shouldMagnetize) {
+                            coin.isMagnetized = true;
+                            
+                            const forceMultiplier = (magnetRadius - distance) / magnetRadius; 
+                            
+                            const accelX = dx / distance * magnetForce * deltaTime * forceMultiplier;
+                            const accelY = dy / distance * magnetForce * deltaTime * forceMultiplier;
+                            
+                            coin.magnetSpeedX += accelX;
+                            coin.magnetSpeedY += accelY;
+                        }
+                    } else {
+                        coin.magnetSpeedX = 0;
+                        coin.magnetSpeedY = 0;
+                    }
+                });
+            }
+
+
+            // Obstacle Update and Collision Check
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.update();
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+                
+                if (obs.isBypassed) {
+                    continue;
+                }
+
+                if (
+                    player.x < obs.x + obs.width &&
+                    player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y
+                ) {
+                    gameOver();
+                    return; 
+                }
+            }
+            
+            // Hole Update and Cleanup
+            for (let i = holes.length - 1; i >= 0; i--) {
+                const hole = holes[i];
+                hole.update();
+                
+                if (hole.x + hole.width < 0) {
+                    holes.splice(i, 1);
+                }
+            }
+
+
+            // Coin Collection Check
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const coin = coins[i];
+                coin.update();
+
+                if (
+                    player.x < coin.x + coin.size &&
+                    player.x + player.width > coin.x &&
+                    player.y < coin.y + coin.size &&
+                    player.y + player.height > coin.y
+                ) {
+                    let value = coin.baseValue; 
+                    if (magnetLevel === 1) {
+                        value = MAGNET_UPGRADE.values[0];
+                    } else if (magnetLevel === 2) {
+                        value = MAGNET_UPGRADE.values[1];
+                    }
+
+                    playerCoins += value;
+                    coinCountElement.textContent = playerCoins;
+                    localStorage.setItem('stickmanCoins', playerCoins); 
+                    coins.splice(i, 1); 
+                    continue; 
+                }
+
+                if (coin.x + coin.size < 0) {
+                    coins.splice(i, 1);
+                }
+            }
+        }
+
+        // Draws all game objects and static elements
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground (The solid part of the ground)
+            ctx.fillStyle = '#2d3748';
+            ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+
+            // Draw holes first, so they cover the ground where they are
+            holes.forEach(hole => hole.draw());
+            
+            // Draw obstacles and coins
+            obstacles.forEach(obs => obs.draw());
+            coins.forEach(coin => coin.draw());
+            
+            // Draw player last
+            if (player) {
+                player.draw();
+            }
+        }
+
+        // Handles game over state
+        function gameOver() {
+            isGameOver = true;
+            const finalScore = Math.floor(score / 10);
+            finalScoreElement.textContent = finalScore;
+            
+            if (finalScore > highScore) {
+                highScore = finalScore;
+                localStorage.setItem('stickmanHighScore', highScore);
+                highScoreElement.textContent = highScore;
+            }
+
+            gameOverModal.style.display = 'flex';
+        }
+        
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight; 
+
+            if (player) {
+                // Recalculate player position to ensure they land on the new ground height
+                const groundY = canvas.height - GROUND_HEIGHT - player.height;
+                if (player.y > groundY && !isFalling) {
+                    player.y = groundY;
+                }
+            }
+            
+            if (ctx) {
+                draw(); 
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            handleInput();
+            updateHackerButtonUI(); 
+            updateTimeButtonUI();
+        });
+        
     </script>
-    <!-- End of HTML -->
 </body>
 </html>
