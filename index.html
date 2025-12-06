@@ -117,6 +117,7 @@
       <p class="text-lg mb-8 text-center max-w-lg">Spend your hard-earned coins on upgrades! Passive abilities are active the entire game.</p>
 
       <div class="w-full max-w-2xl space-y-6">
+
         <!-- Time Ability -->
         <div class="shop-card p-6 border-2 border-[#1c305c]">
           <h3 class="text-3xl font-bold mb-4 text-blue-400">Time Warp Ability (Active)</h3>
@@ -180,6 +181,7 @@
             <button id="buy-magnet-button" onclick="buyUpgrade('magnet')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
           </div>
         </div>
+
       </div>
 
       <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">
@@ -329,7 +331,7 @@
     });
 
     // =======================================================
-    // STICKMAN JUMPER GAME LOGIC (with faster difficulty ramp)
+    // STICKMAN JUMPER GAME LOGIC (faster ramp + constant score rate)
     // =======================================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -339,11 +341,11 @@
 
     // Difficulty tuning
     const BASE_GAME_SPEED = 4.0;
-    const MAX_GAME_SPEED_INCREASE = 6.0;   // was 3.0
-    const MAX_SCORE_FOR_SPEED = 400;       // was 800
-    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 500; // was 1000
-    let obstacleSpawnRate = 100;           // was 120
-    const MIN_OBSTACLE_RATE = 30;          // new tighter bound
+    const MAX_GAME_SPEED_INCREASE = 6.0;       // higher max speed
+    const MAX_SCORE_FOR_SPEED = 400;           // reach max speed sooner
+    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300; // obstacles densify sooner
+    let obstacleSpawnRate = 100;               // starting spacing
+    const MIN_OBSTACLE_RATE = 20;              // tighter minimum spacing
 
     const GROUND_HEIGHT = 50;
     const PLAYER_SIZE = 40;
@@ -353,7 +355,7 @@
     let obstacles = [];
     let coins = [];
     let holes = [];
-    let score = 0;
+    let score = 0;              // time-based score counter
     let currentSpeed = BASE_GAME_SPEED;
 
     let highScore = 0;
@@ -435,6 +437,7 @@
     const highScoreElement = document.getElementById('high-score');
     const finalScoreElement = document.getElementById('final-score');
     const coinCountElement = document.getElementById('coin-count');
+
     const shopCoinCountElement = document.getElementById('shop-coin-count');
     const shopHighScoreElement = document.getElementById('shop-high-score');
 
@@ -476,59 +479,92 @@
         // Arms
         ctx.beginPath(); ctx.moveTo(this.x, this.y + 15); ctx.lineTo(this.x + this.width, this.y + 15); ctx.stroke();
         // Legs
-        ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, this.y + 25); ctx.lineTo(this.x, this.y + this.height);
-        ctx.moveTo(this.x + this.width / 2, this.y + 25); ctx.lineTo(this.x + this.width, this.y + this.height); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width / 2, this.y + 25); ctx.lineTo(this.x, this.y + this.height);
+        ctx.moveTo(this.x + this.width / 2, this.y + 25); ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.stroke();
       }
     }
 
     class Coin {
       constructor() {
-        this.size = 15; this.x = canvas.width; this.color = '#FFD700'; this.baseValue = 1;
-        this.isMagnetized = false; this.magnetSpeedX = 0; this.magnetSpeedY = 0;
+        this.size = 15;
+        this.x = canvas.width;
+        this.color = '#FFD700';
+        this.baseValue = 1;
+        this.isMagnetized = false;
+        this.magnetSpeedX = 0;
+        this.magnetSpeedY = 0;
         const level = Math.floor(Math.random() * 3);
         if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
         else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
         else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
       }
       update() {
-        if (this.isMagnetized) { this.x += this.magnetSpeedX; this.y += this.magnetSpeedY; }
+        if (this.isMagnetized) {
+          this.x += this.magnetSpeedX;
+          this.y += this.magnetSpeedY;
+        }
         this.x -= currentSpeed;
       }
       draw() {
         ctx.fillStyle = this.color;
         if (this.isMagnetized) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 10; }
-        ctx.beginPath(); ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
       }
     }
 
     class Obstacle {
       constructor(type) {
-        this.type = type; this.width = 20 + Math.random() * 20;
-        this.defaultColor = type === 'ground' ? '#ff6b6b' : '#647DEE'; this.color = this.defaultColor;
+        this.type = type;
+        this.width = 20 + Math.random() * 20;
+        this.defaultColor = type === 'ground' ? '#ff6b6b' : '#647DEE';
+        this.color = this.defaultColor;
         this.isBypassed = false;
         if (type === 'ground') {
-          this.height = 20 + Math.random() * 30; this.x = canvas.width; this.y = canvas.height - GROUND_HEIGHT - this.height;
+          this.height = 20 + Math.random() * 30;
+          this.x = canvas.width;
+          this.y = canvas.height - GROUND_HEIGHT - this.height;
         } else {
-          this.height = 15; this.width = 40 + Math.random() * 30;
-          this.x = canvas.width; this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
+          this.height = 15;
+          this.width = 40 + Math.random() * 30;
+          this.x = canvas.width;
+          this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
         }
       }
       update() { this.x -= currentSpeed; }
       draw() {
-        ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
         if (this.type === 'ground' && this.color === this.defaultColor) {
-          ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(this.x, canvas.height - GROUND_HEIGHT, this.width, 10);
+          ctx.fillStyle = 'rgba(0,0,0,0.2)';
+          ctx.fillRect(this.x, canvas.height - GROUND_HEIGHT, this.width, 10);
         }
       }
     }
 
     class Hole {
-      constructor() { this.width = 75 + Math.random() * 75; this.x = canvas.width; this.y = canvas.height - GROUND_HEIGHT; this.height = GROUND_HEIGHT; this.isHazard = true; }
+      constructor() {
+        this.width = 75 + Math.random() * 75;
+        this.x = canvas.width;
+        this.y = canvas.height - GROUND_HEIGHT;
+        this.height = GROUND_HEIGHT;
+        this.isHazard = true;
+      }
       update() { this.x -= currentSpeed; }
       draw() {
-        ctx.fillStyle = '#16213e'; ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.width, this.y); ctx.stroke();
+        ctx.fillStyle = '#16213e';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.width, this.y);
+        ctx.stroke();
       }
     }
 
@@ -764,10 +800,14 @@
     }
 
     function update(deltaTime) {
+      // Constant score rate (independent of game speed)
+      score += deltaTime / 16; // ~60 points/sec steady
       const uiScore = Math.floor(score / 10);
+      scoreElement.textContent = uiScore;
+
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
 
-      // Speed ramp based on score (faster curve)
+      // Speed ramp based on score
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
@@ -797,7 +837,9 @@
         if (player.y >= groundY) {
           let fallingIntoHole = false;
           for (const hole of holes) {
-            if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { fallingIntoHole = true; break; }
+            if (player.x + player.width > hole.x && player.x < hole.x + hole.width) {
+              fallingIntoHole = true; break;
+            }
           }
           if (fallingIntoHole) { isFalling = true; player.velocityY = 0; }
           else { player.y = groundY; player.velocityY = 0; jumpCount = 0; }
@@ -808,15 +850,10 @@
         if (player.y > canvas.height + 50) { gameOver(); return; }
       }
 
-      // Score
-      score += 1;
-      scoreElement.textContent = uiScore;
-
-      // Obstacle spawn rate ramp (faster densification)
-      const initialRate = 100; // start closer
+      // Obstacle spawn rate ramp (closer faster)
+      const initialRate = 100;
       const minRate = MIN_OBSTACLE_RATE;
-      const maxScoreForDifficulty = MAX_SCORE_FOR_OBSTACLE_DENSITY;
-      const difficultyFactor = Math.min(uiScore / maxScoreForDifficulty, 1);
+      const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
       const rateReduction = (initialRate - minRate) * difficultyFactor;
       obstacleSpawnRate = initialRate - rateReduction;
 
@@ -868,13 +905,12 @@
         });
       }
 
-      // Update obstacles/collisions
+      // Obstacles and collisions
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         obs.update();
         if (obs.x + obs.width < 0) { obstacles.splice(i, 1); continue; }
         if (obs.isBypassed) continue;
-
         if (player.x < obs.x + obs.width &&
             player.x + player.width > obs.x &&
             player.y < obs.y + obs.height &&
@@ -925,9 +961,12 @@
 
     function gameOver() {
       isGameOver = true;
-      const finalScore = Math.floor(score / 10);
+      const finalScore = Math.floor(score / 10); // consistent with HUD scoring
       finalScoreElement.textContent = finalScore;
-      if (finalScore > highScore) { highScore = finalScore; highScoreElement.textContent = highScore; }
+      if (finalScore > highScore) {
+        highScore = finalScore;
+        highScoreElement.textContent = highScore;
+      }
       persistUserData();
       gameOverModal.style.display = 'flex';
     }
