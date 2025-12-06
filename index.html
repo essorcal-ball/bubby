@@ -167,20 +167,88 @@
           </div>
         </div>
 
-        <!-- Skins -->
+        <!-- Skins Section -->
         <div class="shop-card p-6 border-2 border-[#1c305c]">
           <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Christmas Santa Skin</p>
-            <p class="text-lg text-gray-300 mb-2">Dress up as Santa!</p>
-            <p class="text-lg">Owned: <span id="santa-owned" class="font-bold text-green-400">No</span></p>
-            <p class="text-lg">Equipped: <span id="equipped-skin" class="font-bold text-green-400">default</span></p>
+          <p class="text-lg mb-2">Equipped: <span id="equipped-skin" class="font-bold text-green-400">default</span></p>
+
+          <!-- Santa Skin -->
+          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <canvas id="santa-preview" width="60" height="80"></canvas>
+              <div>
+                <p class="text-xl font-bold">Christmas Santa</p>
+                <p>Owned: <span id="santa-owned" class="font-bold text-green-400">No</span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <p class="text-yellow-400 font-bold">Cost: 5</p>
+              <button onclick="buySkin('santa')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
+              <button onclick="equipSkin('santa')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
+            </div>
           </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="santa-cost" class="text-xl font-bold text-yellow-400">Cost: 50 Coins</p>
-            <div class="flex gap-2">
-              <button id="buy-santa-button" onclick="buySkin('santa')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">Buy</button>
-              <button id="equip-santa-button" onclick="equipSkin('santa')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Equip</button>
+
+          <!-- Ninja Skin -->
+          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <canvas id="ninja-preview" width="60" height="80"></canvas>
+              <div>
+                <p class="text-xl font-bold">Ninja</p>
+                <p>Owned: <span id="ninja-owned" class="font-bold text-green-400">No</span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <p class="text-yellow-400 font-bold">Cost: 10</p>
+              <button onclick="buySkin('ninja')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
+              <button onclick="equipSkin('ninja')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
+            </div>
+          </div>
+
+          <!-- Robot Skin -->
+          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <canvas id="robot-preview" width="60" height="80"></canvas>
+              <div>
+                <p class="text-xl font-bold">Robot</p>
+                <p>Owned: <span id="robot-owned" class="font-bold text-green-400">No</span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <p class="text-yellow-400 font-bold">Cost: 15</p>
+              <button onclick="buySkin('robot')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
+              <button onclick="equipSkin('robot')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
+            </div>
+          </div>
+
+          <!-- Pirate Skin -->
+          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <canvas id="pirate-preview" width="60" height="80"></canvas>
+              <div>
+                <p class="text-xl font-bold">Pirate</p>
+                <p>Owned: <span id="pirate-owned" class="font-bold text-green-400">No</span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <p class="text-yellow-400 font-bold">Cost: 12</p>
+              <button onclick="buySkin('pirate')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
+              <button onclick="equipSkin('pirate')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
+            </div>
+          </div>
+
+          <!-- Rainbow Skin -->
+          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <canvas id="rainbow-preview" width="60" height="80"></canvas>
+              <div>
+                <p class="text-xl font-bold">Rainbow Stickman</p>
+                <p>Owned: <span id="rainbow-owned" class="font-bold text-green-400">No</span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <p class="text-yellow-400 font-bold">Cost: 20</p>
+              <button onclick="buySkin('rainbow')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
+              <button onclick="equipSkin('rainbow')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
             </div>
           </div>
         </div>
@@ -221,7 +289,13 @@
       if (!username || !password || !confirmPassword) { alert("Please fill in all fields."); return; }
       if (password !== confirmPassword) { alert("Passwords do not match."); return; }
       if (getUserData(username)) { alert("Account already exists. Please login."); return; }
-      const newUser = { password, coins:0, highScore:0, upgrades:{time:0,hacker:0,jump:0,magnet:0}, skins:{owned:['default'], equipped:'default'} };
+      const newUser = {
+        password,
+        coins:0,
+        highScore:0,
+        upgrades:{time:0,hacker:0,jump:0,magnet:0},
+        skins:{ owned:['default'], equipped:'default' }
+      };
       saveUserData(username, newUser);
       alert("Account created! Please login.");
     }
@@ -241,7 +315,6 @@
       persistUserData();
       alert(`Logged out from ${currentUser}.`);
       currentUser = null;
-
       // Reset in-memory state
       playerCoins = 0;
       highScore = 0;
@@ -249,9 +322,8 @@
       hackerLevel = 0;
       jumpLevel = 0;
       magnetLevel = 0;
-      ownedSkins = { default: true, santa: false };
+      ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
       equippedSkin = 'default';
-
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
       updateUserStatus();
@@ -264,20 +336,23 @@
       hackerLevel = userData.upgrades.hacker;
       jumpLevel = userData.upgrades.jump;
       magnetLevel = userData.upgrades.magnet;
-
       // Skins
-      ownedSkins = { default: true, santa: userData.skins.owned.includes('santa') };
-      equippedSkin = userData.skins.equipped || 'default';
+      ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
+      userData.skins?.owned?.forEach(k => { if (ownedSkins.hasOwnProperty(k)) ownedSkins[k] = true; });
+      equippedSkin = userData.skins?.equipped || 'default';
       document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
+      document.getElementById('ninja-owned').textContent = ownedSkins.ninja ? 'Yes' : 'No';
+      document.getElementById('robot-owned').textContent = ownedSkins.robot ? 'Yes' : 'No';
+      document.getElementById('pirate-owned').textContent = ownedSkins.pirate ? 'Yes' : 'No';
+      document.getElementById('rainbow-owned').textContent = ownedSkins.rainbow ? 'Yes' : 'No';
       document.getElementById('equipped-skin').textContent = equippedSkin;
-
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
     }
     function persistUserData() {
       if (!currentUser) return;
       const existing = getUserData(currentUser);
-      const ownedList = ['default'].concat(ownedSkins.santa ? ['santa'] : []);
+      const ownedList = Object.keys(ownedSkins).filter(k => ownedSkins[k]);
       const userData = {
         password: existing?.password || '',
         coins: playerCoins,
@@ -312,19 +387,17 @@
         targetScreen = 'login';
       }
       if (currentScreen === targetScreen) return;
-
       if (currentScreen === 'game') stopGame();
-
       Object.values(screens).forEach(screen => { if (screen) screen.style.display = 'none'; });
       if (screens[targetScreen]) {
         screens[targetScreen].style.display = 'flex';
         currentScreen = targetScreen;
-
         if (targetScreen === 'game') {
           resizeCanvas();
           startGame();
         } else if (targetScreen === 'shop') {
           updateShopUI();
+          drawAllPreviews();
         }
       } else {
         console.error(`Unknown screen: ${targetScreen}`);
@@ -334,6 +407,7 @@
     window.onload = () => {
       goToScreen('login');
       updateUserStatus();
+      drawAllPreviews();
     };
     window.addEventListener('resize', () => {
       if (currentScreen === 'game') resizeCanvas();
@@ -391,7 +465,7 @@
     const COIN_SPAWN_RATE = 350;
 
     let equippedSkin = 'default';
-    let ownedSkins = { default: true, santa: false };
+    let ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
 
     // =======================================================
     // UPGRADES SETUP
@@ -440,7 +514,7 @@
     const MAGNET_UPGRADE = {
       costs: [40, 80],
       highScoreRequirement: [300, 800],
-      values: [2, 3],  // 2x, 3x coin value multipliers
+      values: [2, 3],  // 2x, 3x
       radii: [150, 300],
       maxLevel: 2,
       effect: (level) => {
@@ -498,33 +572,94 @@
         }
       }
       draw() {
-        if (this.skin === 'santa') {
-          // Simple Santa: red suit rectangle + white hat pom
-          ctx.fillStyle = '#ff0000';
-          ctx.fillRect(this.x, this.y, this.width, this.height);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(this.x, this.y, this.width, 5);
-          ctx.beginPath();
-          ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-        } else {
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 3;
-          ctx.lineCap = 'round';
-          // Head
-          ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-          // Body
-          const bodyTop = this.y + 10;
-          const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
-          ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-          // Arms
-          ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-          // Legs
-          ctx.beginPath();
-          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
-          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
-          ctx.stroke();
+        switch (this.skin) {
+          case 'santa': {
+            // Body
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(this.x, this.y, this.width, 5);
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(this.x + this.width/2, this.y - 10, 10, 0, Math.PI*2);
+            ctx.fillStyle = '#ffe0bd';
+            ctx.fill();
+
+            // Hat brim
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(this.x + this.width/2 - 12, this.y - 20, 24, 5);
+
+            // Hat triangle
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width/2, this.y - 20);
+            ctx.lineTo(this.x + this.width/2 - 12, this.y - 40);
+            ctx.lineTo(this.x + this.width/2 + 12, this.y - 40);
+            ctx.closePath();
+            ctx.fill();
+
+            // Hat pom
+            ctx.beginPath();
+            ctx.arc(this.x + this.width/2, this.y - 42, 5, 0, Math.PI*2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            break;
+          }
+          case 'ninja': {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(this.x, this.y - 5, this.width, 5); // headband
+            break;
+          }
+          case 'robot': {
+            ctx.fillStyle = '#888';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#0ff';
+            ctx.fillRect(this.x + 5, this.y - 10, 5, 5);
+            ctx.fillRect(this.x + 15, this.y - 10, 5, 5);
+            break;
+          }
+          case 'pirate': {
+            ctx.fillStyle = '#964B00';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x + 5, this.y - 10, 10, 10); // hat
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(this.x + 15, this.y - 5, 5, 5); // eyepatch
+            break;
+          }
+          case 'rainbow': {
+            const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+            gradient.addColorStop(0, 'red');
+            gradient.addColorStop(0.25, 'orange');
+            gradient.addColorStop(0.5, 'yellow');
+            gradient.addColorStop(0.75, 'green');
+            gradient.addColorStop(1, 'blue');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            break;
+          }
+          default: {
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            // Head
+            ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
+            // Body
+            const bodyTop = this.y + 10;
+            const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
+            ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
+            // Arms
+            ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
+            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
+            ctx.stroke();
+            break;
+          }
         }
       }
     }
@@ -621,13 +756,13 @@
 
     class Trap {
       constructor() {
-        this.width = 75 + Math.random() * 75;
+        this.width = 40 + Math.random() * 20; // shorter, subtle
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        this.color = '#2b0000'; // much darker red
-        this.animationProgress = 0; // 0 → 1 for closing jaws
+        this.color = '#0d0000'; // near-black red
+        this.animationProgress = 0; // 0 → 1 for swinging jaws
       }
       update() {
         this.x -= currentSpeed;
@@ -636,35 +771,51 @@
         }
       }
       draw() {
-        // Base trap area
+        // Base trap strip
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
 
-        // Bear-trap sticks (two rows closing)
-        const stickHeight = 20;
-        const stickWidth = 6;
-        const spacing = 20;
-        const numSticks = Math.floor(this.width / spacing);
-        const topRowY = this.y;     // from ground up
-        const bottomRowY = this.y;  // same base, rotate opposite
+        if (this.isTriggered) {
+          // Two swinging sticks with spikes
+          const stickLength = 25;
+          const stickWidth = 6;
+          const baseX = this.x + this.width / 2;
+          const baseY = this.y;
 
-        for (let i = 0; i < numSticks; i++) {
-          const baseX = this.x + i * spacing + 5;
-
-          // Left jaw (rotates right)
+          // Left jaw swings up-right
           ctx.save();
-          ctx.translate(baseX, topRowY);
-          if (this.isTriggered) ctx.rotate(-Math.PI / 4 * this.animationProgress);
+          ctx.translate(baseX - 10, baseY);
+          ctx.rotate(-Math.PI / 3 * this.animationProgress);
           ctx.fillStyle = '#a10000';
-          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
+          ctx.fillRect(-stickWidth / 2, -stickLength, stickWidth, stickLength);
+          // spikes on left jaw
+          ctx.fillStyle = '#dc2626';
+          for (let s = 0; s < stickLength; s += 6) {
+            ctx.beginPath();
+            ctx.moveTo(0, -s);
+            ctx.lineTo(4, -s - 6);
+            ctx.lineTo(-4, -s - 6);
+            ctx.closePath();
+            ctx.fill();
+          }
           ctx.restore();
 
-          // Right jaw (rotates left)
+          // Right jaw swings up-left
           ctx.save();
-          ctx.translate(baseX + spacing/2, bottomRowY);
-          if (this.isTriggered) ctx.rotate(Math.PI / 4 * this.animationProgress);
+          ctx.translate(baseX + 10, baseY);
+          ctx.rotate(Math.PI / 3 * this.animationProgress);
           ctx.fillStyle = '#a10000';
-          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
+          ctx.fillRect(-stickWidth / 2, -stickLength, stickWidth, stickLength);
+          // spikes on right jaw
+          ctx.fillStyle = '#dc2626';
+          for (let s = 0; s < stickLength; s += 6) {
+            ctx.beginPath();
+            ctx.moveTo(0, -s);
+            ctx.lineTo(4, -s - 6);
+            ctx.lineTo(-4, -s - 6);
+            ctx.closePath();
+            ctx.fill();
+          }
           ctx.restore();
         }
       }
@@ -792,7 +943,6 @@
 
       document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver) player.jump(); });
 
-      // Mobile crouch button: press to crouch, release to stand
       const crouchButton = document.getElementById('crouch-button');
       crouchButton.addEventListener('mousedown', () => player.crouch(true));
       crouchButton.addEventListener('mouseup', () => player.crouch(false));
@@ -804,7 +954,7 @@
     }
 
     // =======================================================
-    // SHOP LOGIC
+    // SHOP LOGIC (Upgrades + Skins)
     // =======================================================
     function buyUpgrade(upgradeName) {
       const upgrade = UPGRADES[upgradeName];
@@ -841,21 +991,21 @@
       if (key === 'magnet') magnetLevel = level;
     }
 
-    // Skins
+    const skinCosts = { santa:5, ninja:10, robot:15, pirate:12, rainbow:20 };
     function buySkin(skinName) {
-      if (skinName === 'santa') {
-        if (ownedSkins.santa) { alert('Already owned.'); return; }
-        if (playerCoins < 50) { alert('Not enough coins.'); return; }
-        playerCoins -= 50;
-        ownedSkins.santa = true;
-        document.getElementById('santa-owned').textContent = 'Yes';
-        coinCountElement.textContent = playerCoins;
-        updateShopUI();
-        persistUserData();
-      }
+      if (ownedSkins[skinName]) { alert('Already owned.'); return; }
+      const cost = skinCosts[skinName] || 0;
+      if (playerCoins < cost) { alert('Not enough coins.'); return; }
+      playerCoins -= cost;
+      ownedSkins[skinName] = true;
+      coinCountElement.textContent = playerCoins;
+      const ownedEl = document.getElementById(`${skinName}-owned`);
+      if (ownedEl) ownedEl.textContent = 'Yes';
+      updateShopUI();
+      persistUserData();
     }
     function equipSkin(skinName) {
-      if (skinName === 'santa' && !ownedSkins.santa) { alert('Skin not owned.'); return; }
+      if (!ownedSkins[skinName]) { alert('Skin not owned.'); return; }
       equippedSkin = skinName;
       document.getElementById('equipped-skin').textContent = equippedSkin;
       if (player) player.setSkin(equippedSkin);
@@ -865,7 +1015,11 @@
     function updateShopUI() {
       shopCoinCountElement.textContent = playerCoins;
       shopHighScoreElement.textContent = highScore;
-      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
+      // Owned flags
+      ['santa','ninja','robot','pirate','rainbow'].forEach(k => {
+        const el = document.getElementById(`${k}-owned`);
+        if (el) el.textContent = ownedSkins[k] ? 'Yes' : 'No';
+      });
       document.getElementById('equipped-skin').textContent = equippedSkin;
 
       Object.keys(UPGRADES).forEach(key => {
@@ -912,6 +1066,76 @@
           reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
         }
       });
+    }
+
+    // =======================================================
+    // PREVIEWS
+    // =======================================================
+    function drawSkinPreview(canvasId, skinName) {
+      const c = document.getElementById(canvasId);
+      if (!c) return;
+      const pctx = c.getContext('2d');
+      pctx.clearRect(0,0,c.width,c.height);
+      const x = 20, y = 40, w = 20, h = 30;
+      switch (skinName) {
+        case 'santa': {
+          // Body
+          pctx.fillStyle = '#ff0000';
+          pctx.fillRect(x, y, w, h);
+          pctx.fillStyle = '#fff';
+          pctx.fillRect(x, y, w, 4);
+          // Head
+          pctx.beginPath(); pctx.arc(x + w/2, y - 10, 10, 0, Math.PI*2); pctx.fillStyle = '#ffe0bd'; pctx.fill();
+          // Hat brim
+          pctx.fillStyle = '#fff'; pctx.fillRect(x + w/2 - 12, y - 20, 24, 4);
+          // Hat triangle
+          pctx.fillStyle = '#ff0000';
+          pctx.beginPath();
+          pctx.moveTo(x + w/2, y - 20);
+          pctx.lineTo(x + w/2 - 12, y - 40);
+          pctx.lineTo(x + w/2 + 12, y - 40);
+          pctx.closePath();
+          pctx.fill();
+          // Pom
+          pctx.beginPath(); pctx.arc(x + w/2, y - 42, 4, 0, Math.PI*2); pctx.fillStyle = '#fff'; pctx.fill();
+          break;
+        }
+        case 'ninja': {
+          pctx.fillStyle = '#000'; pctx.fillRect(x, y, w, h);
+          pctx.fillStyle = '#ff0000'; pctx.fillRect(x, y - 5, w, 4);
+          break;
+        }
+        case 'robot': {
+          pctx.fillStyle = '#888'; pctx.fillRect(x, y, w, h);
+          pctx.fillStyle = '#0ff'; pctx.fillRect(x + 5, y - 10, 4, 4); pctx.fillRect(x + 11, y - 10, 4, 4);
+          break;
+        }
+        case 'pirate': {
+          pctx.fillStyle = '#964B00'; pctx.fillRect(x, y, w, h);
+          pctx.fillStyle = '#000'; pctx.fillRect(x + 5, y - 12, 10, 8);
+          pctx.fillStyle = '#fff'; pctx.fillRect(x + 14, y - 5, 4, 4);
+          break;
+        }
+        case 'rainbow': {
+          const g = pctx.createLinearGradient(x, y, x, y + h);
+          g.addColorStop(0, 'red'); g.addColorStop(0.25, 'orange'); g.addColorStop(0.5, 'yellow'); g.addColorStop(0.75, 'green'); g.addColorStop(1, 'blue');
+          pctx.fillStyle = g; pctx.fillRect(x, y, w, h);
+          break;
+        }
+        default: {
+          pctx.strokeStyle = '#fff'; pctx.lineWidth = 2;
+          pctx.beginPath(); pctx.arc(x + w/2, y - 8, 6, 0, Math.PI*2); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(x + w/2, y); pctx.lineTo(x + w/2, y + 16); pctx.stroke();
+          break;
+        }
+      }
+    }
+    function drawAllPreviews() {
+      drawSkinPreview('santa-preview','santa');
+      drawSkinPreview('ninja-preview','ninja');
+      drawSkinPreview('robot-preview','robot');
+      drawSkinPreview('pirate-preview','pirate');
+      drawSkinPreview('rainbow-preview','rainbow');
     }
 
     // =======================================================
@@ -1180,3 +1404,4 @@
     });
   </script>
 </body>
+</html>
