@@ -67,20 +67,19 @@
       <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
 
       <div id="game-controls" class="mt-6 flex flex-wrap justify-center gap-4">
-        <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">
-          JUMP (or Tap Screen)
-        </button>
-        <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">
-          CROUCH (ArrowDown/S)
-        </button>
+        <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">JUMP</button>
+        <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">CROUCH (ArrowDown/S)</button>
+
         <button id="hacker-button" onclick="activateHackerAbility()" class="main-button bg-purple-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
           <div id="hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
           <span id="hacker-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY IN SHOP</span>
         </button>
+
         <button id="time-button" onclick="activateTimeAbility()" class="main-button bg-blue-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
           <div id="time-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
           <span id="time-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY TIME</span>
         </button>
+
         <button onclick="startGame()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">Restart Game</button>
         <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">← Quit</button>
       </div>
@@ -89,9 +88,7 @@
         <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
           <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
           <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
-          <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">
-            Try Again!
-          </button>
+          <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">Try Again!</button>
         </div>
       </div>
     </div>
@@ -103,10 +100,9 @@
         💰 Your Coins: <span id="shop-coin-count" class="font-bold text-yellow-400">0</span>
         | High Score: <span id="shop-high-score" class="font-bold text-yellow-400">0</span>
       </p>
-      <p class="text-lg mb-8 text-center max-w-lg">Spend your hard-earned coins on upgrades! Passive abilities are active the entire game.</p>
+      <p class="text-lg mb-8 text-center max-w-lg">Spend your hard-earned coins on upgrades and skins.</p>
 
       <div class="w-full max-w-2xl space-y-6">
-
         <!-- Time Ability -->
         <div class="shop-card p-6 border-2 border-[#1c305c]">
           <h3 class="text-3xl font-bold mb-4 text-blue-400">Time Warp Ability (Active)</h3>
@@ -171,17 +167,33 @@
           </div>
         </div>
 
+        <!-- Skins -->
+        <div class="shop-card p-6 border-2 border-[#1c305c]">
+          <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
+          <div class="bg-[#203463] p-4 rounded-lg">
+            <p class="text-2xl font-bold">Christmas Santa Skin</p>
+            <p class="text-lg text-gray-300 mb-2">Dress up as Santa!</p>
+            <p class="text-lg">Owned: <span id="santa-owned" class="font-bold text-green-400">No</span></p>
+            <p class="text-lg">Equipped: <span id="equipped-skin" class="font-bold text-green-400">default</span></p>
+          </div>
+          <div class="flex justify-between items-center mt-4">
+            <p id="santa-cost" class="text-xl font-bold text-yellow-400">Cost: 50 Coins</p>
+            <div class="flex gap-2">
+              <button id="buy-santa-button" onclick="buySkin('santa')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">Buy</button>
+              <button id="equip-santa-button" onclick="equipSkin('santa')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Equip</button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">
-        ← Back to Menu
-      </button>
+      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">← Back to Menu</button>
     </div>
   </div>
 
   <script>
     // =======================================================
-    // ACCOUNT SYSTEM (Username + Password + Confirm + Toggle)
+    // ACCOUNT SYSTEM
     // =======================================================
     let currentUser = null;
     const currentUsernameElement = document.getElementById('current-username');
@@ -197,11 +209,9 @@
       const passwordField = document.getElementById(fieldId);
       const toggleButton = passwordField.nextElementSibling;
       if (passwordField.type === "password") {
-        passwordField.type = "text";
-        toggleButton.textContent = "Hide";
+        passwordField.type = "text"; toggleButton.textContent = "Hide";
       } else {
-        passwordField.type = "password";
-        toggleButton.textContent = "Show";
+        passwordField.type = "password"; toggleButton.textContent = "Show";
       }
     }
     function createAccount() {
@@ -211,7 +221,7 @@
       if (!username || !password || !confirmPassword) { alert("Please fill in all fields."); return; }
       if (password !== confirmPassword) { alert("Passwords do not match."); return; }
       if (getUserData(username)) { alert("Account already exists. Please login."); return; }
-      const newUser = { password, coins:0, highScore:0, upgrades:{time:0,hacker:0,jump:0,magnet:0} };
+      const newUser = { password, coins:0, highScore:0, upgrades:{time:0,hacker:0,jump:0,magnet:0}, skins:{owned:['default'], equipped:'default'} };
       saveUserData(username, newUser);
       alert("Account created! Please login.");
     }
@@ -239,6 +249,8 @@
       hackerLevel = 0;
       jumpLevel = 0;
       magnetLevel = 0;
+      ownedSkins = { default: true, santa: false };
+      equippedSkin = 'default';
 
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
@@ -252,17 +264,26 @@
       hackerLevel = userData.upgrades.hacker;
       jumpLevel = userData.upgrades.jump;
       magnetLevel = userData.upgrades.magnet;
+
+      // Skins
+      ownedSkins = { default: true, santa: userData.skins.owned.includes('santa') };
+      equippedSkin = userData.skins.equipped || 'default';
+      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
+      document.getElementById('equipped-skin').textContent = equippedSkin;
+
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
     }
     function persistUserData() {
       if (!currentUser) return;
       const existing = getUserData(currentUser);
+      const ownedList = ['default'].concat(ownedSkins.santa ? ['santa'] : []);
       const userData = {
         password: existing?.password || '',
         coins: playerCoins,
         highScore: highScore,
-        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel }
+        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel },
+        skins: { owned: ownedList, equipped: equippedSkin }
       };
       saveUserData(currentUser, userData);
     }
@@ -271,7 +292,7 @@
     }
 
     // =======================================================
-    // MENU NAVIGATION LOGIC
+    // NAVIGATION
     // =======================================================
     let currentScreen = 'login';
     let animationFrameId = null;
@@ -292,9 +313,8 @@
       }
       if (currentScreen === targetScreen) return;
 
-      if (currentScreen === 'game') {
-        stopGame();
-      }
+      if (currentScreen === 'game') stopGame();
+
       Object.values(screens).forEach(screen => { if (screen) screen.style.display = 'none'; });
       if (screens[targetScreen]) {
         screens[targetScreen].style.display = 'flex';
@@ -307,7 +327,7 @@
           updateShopUI();
         }
       } else {
-        console.error(`Attempted to navigate to unknown screen: ${targetScreen}`);
+        console.error(`Unknown screen: ${targetScreen}`);
       }
     }
 
@@ -320,7 +340,7 @@
     });
 
     // =======================================================
-    // GAME LOGIC (faster ramp + constant score + new mechanics)
+    // GAME CONSTANTS
     // =======================================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -328,13 +348,12 @@
     const GRAVITY = 0.6;
     const JUMP_VELOCITY = -12;
 
-    // Difficulty tuning
     const BASE_GAME_SPEED = 4.0;
-    const MAX_GAME_SPEED_INCREASE = 6.0;           // higher max speed
-    const MAX_SCORE_FOR_SPEED = 400;               // reach max speed sooner
-    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300;    // obstacles densify sooner
-    let obstacleSpawnRate = 100;                   // starting spacing
-    const MIN_OBSTACLE_RATE = 20;                  // tighter minimum spacing
+    const MAX_GAME_SPEED_INCREASE = 6.0;
+    const MAX_SCORE_FOR_SPEED = 400;
+    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300;
+    let obstacleSpawnRate = 100;
+    const MIN_OBSTACLE_RATE = 20;
 
     const GROUND_HEIGHT = 50;
     const PLAYER_SIZE = 40;
@@ -344,14 +363,13 @@
     let obstacles = [];
     let coins = [];
     let holes = [];
-    let traps = [];                                 // independent traps
-    let score = 0;                                  // time-based score counter
+    let traps = [];
+    let score = 0;
     let currentSpeed = BASE_GAME_SPEED;
 
     let highScore = 0;
     let playerCoins = 0;
 
-    // Upgrades state
     let timeLevel = 0;
     let hackerLevel = 0;
     let jumpLevel = 0;
@@ -360,7 +378,6 @@
     let jumpCount = 0;
     let isFalling = false;
 
-    // Abilities state
     let isHackerAbilityReady = true;
     let hackerCooldownRemaining = 0;
 
@@ -373,7 +390,12 @@
     let coinSpawnTimer = 0;
     const COIN_SPAWN_RATE = 350;
 
-    // === Upgrades definitions (costs, requirements, effects) ===
+    let equippedSkin = 'default';
+    let ownedSkins = { default: true, santa: false };
+
+    // =======================================================
+    // UPGRADES SETUP
+    // =======================================================
     const TIME_UPGRADE = {
       costs: [12, 20, 35],
       cooldowns: [30000, 20000, 35000],
@@ -392,7 +414,7 @@
 
     const HACKER_UPGRADE = {
       costs: [10, 25, 40],
-      cooldowns: [9000, 13000, 16000], // 9s, 13s, 16s
+      cooldowns: [9000, 13000, 16000],
       highScoreRequirement: [400, 550, 800],
       maxLevel: 3,
       effect: (level) => {
@@ -418,7 +440,7 @@
     const MAGNET_UPGRADE = {
       costs: [40, 80],
       highScoreRequirement: [300, 800],
-      values: [2, 3],          // 2x, 3x coin value
+      values: [2, 3],  // 2x, 3x coin value multipliers
       radii: [150, 300],
       maxLevel: 2,
       effect: (level) => {
@@ -445,7 +467,9 @@
     const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
     const timeCooldownText = document.getElementById('time-cooldown-text');
 
-    // Player class with crouch
+    // =======================================================
+    // CLASSES
+    // =======================================================
     class Player {
       constructor() {
         this.width = PLAYER_SIZE / 2;
@@ -454,16 +478,13 @@
         this.y = canvas.height - GROUND_HEIGHT - this.height;
         this.velocityY = 0;
         this.isCrouching = false;
+        this.skin = equippedSkin;
       }
+      setSkin(skinName) { this.skin = skinName; }
       crouch(on) {
         this.isCrouching = on;
-        if (on) {
-          this.height = PLAYER_SIZE / 2;
-          this.y = canvas.height - GROUND_HEIGHT - this.height;
-        } else {
-          this.height = PLAYER_SIZE;
-          this.y = canvas.height - GROUND_HEIGHT - this.height;
-        }
+        this.height = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
+        this.y = canvas.height - GROUND_HEIGHT - this.height;
       }
       jump() {
         if (!isGameOver && !isFalling && !this.isCrouching) {
@@ -477,25 +498,34 @@
         }
       }
       draw() {
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        // Head
-        ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-        // Body (shorter if crouching)
-        ctx.beginPath();
-        const bodyTop = this.y + 10;
-        const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
-        ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-        // Arms
-        ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-        // Legs
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.width / 2, bodyBottom);
-        ctx.lineTo(this.x, this.y + this.height);
-        ctx.moveTo(this.x + this.width / 2, bodyBottom);
-        ctx.lineTo(this.x + this.width, this.y + this.height);
-        ctx.stroke();
+        if (this.skin === 'santa') {
+          // Simple Santa: red suit rectangle + white hat pom
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(this.x, this.y, this.width, 5);
+          ctx.beginPath();
+          ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          // Head
+          ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
+          // Body
+          const bodyTop = this.y + 10;
+          const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
+          ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
+          // Arms
+          ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
+          // Legs
+          ctx.beginPath();
+          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
+          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
+          ctx.stroke();
+        }
       }
     }
 
@@ -547,14 +577,13 @@
           this.width = 40 + Math.random() * 30;
           this.x = canvas.width;
           this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
-          this.vy = 0.3; // vertical drift for flying obstacles
+          this.vy = 0.3; // swoop speed
         }
       }
       update() {
         this.x -= currentSpeed;
-        // After 250 points, flying obstacles drift downward toward player
         if (this.type === 'air' && Math.floor(score / 10) >= 250) {
-          this.y += this.vy;
+          this.y += this.vy; // fly downward toward player
         }
       }
       draw() {
@@ -575,7 +604,7 @@
         this.height = GROUND_HEIGHT;
         this.isHazard = true;
         this.isBypassed = false;
-        this.color = '#16213e'; // default hole color
+        this.color = '#16213e';
       }
       update() { this.x -= currentSpeed; }
       draw() {
@@ -597,33 +626,59 @@
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        this.color = '#7f1d1d'; // dark red, easy to overlook
+        this.color = '#2b0000'; // much darker red
+        this.animationProgress = 0; // 0 → 1 for closing jaws
       }
-      update() { this.x -= currentSpeed; }
+      update() {
+        this.x -= currentSpeed;
+        if (this.isTriggered && this.animationProgress < 1) {
+          this.animationProgress += 0.05;
+        }
+      }
       draw() {
+        // Base trap area
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
-        // Show spikes if triggered
-        if (this.isTriggered) {
-          ctx.fillStyle = '#dc2626';
-          for (let i = 0; i < this.width; i += 10) {
-            ctx.beginPath();
-            ctx.moveTo(this.x + i, this.y);
-            ctx.lineTo(this.x + i + 5, this.y - 15);
-            ctx.lineTo(this.x + i + 10, this.y);
-            ctx.fill();
-          }
+
+        // Bear-trap sticks (two rows closing)
+        const stickHeight = 20;
+        const stickWidth = 6;
+        const spacing = 20;
+        const numSticks = Math.floor(this.width / spacing);
+        const topRowY = this.y;     // from ground up
+        const bottomRowY = this.y;  // same base, rotate opposite
+
+        for (let i = 0; i < numSticks; i++) {
+          const baseX = this.x + i * spacing + 5;
+
+          // Left jaw (rotates right)
+          ctx.save();
+          ctx.translate(baseX, topRowY);
+          if (this.isTriggered) ctx.rotate(-Math.PI / 4 * this.animationProgress);
+          ctx.fillStyle = '#a10000';
+          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
+          ctx.restore();
+
+          // Right jaw (rotates left)
+          ctx.save();
+          ctx.translate(baseX + spacing/2, bottomRowY);
+          if (this.isTriggered) ctx.rotate(Math.PI / 4 * this.animationProgress);
+          ctx.fillStyle = '#a10000';
+          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
+          ctx.restore();
         }
       }
     }
 
+    // =======================================================
+    // ABILITIES
+    // =======================================================
     function activateHackerAbility() {
       if (hackerLevel === 0 || !isHackerAbilityReady || isGameOver) return;
       isHackerAbilityReady = false;
       const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
       hackerCooldownRemaining = currentCooldown;
 
-      // Determine bypass count
       let bypassCount = 1;
       if (hackerLevel === 2) bypassCount = 2;
       if (hackerLevel === 3) bypassCount = 3;
@@ -635,16 +690,14 @@
         targets = targets.concat(holeTargets);
       }
 
-      // Bypass first N targets
       for (let i = 0; i < bypassCount && i < targets.length; i++) {
         const target = targets[i];
-        // Mark bypass visually
         if (target instanceof Obstacle) {
           target.isBypassed = true;
-          target.color = '#059669'; // green obstacle
+          target.color = '#059669'; // green for bypassed obstacle
         } else if (target instanceof Hole) {
           target.isBypassed = true;
-          target.color = '#34d399'; // brighter green hole to show it's safe
+          target.color = '#34d399'; // bright green for safe hole
         }
       }
       updateHackerButtonUI();
@@ -721,6 +774,9 @@
       }
     }
 
+    // =======================================================
+    // INPUT
+    // =======================================================
     function handleInput() {
       document.addEventListener('keydown', (e) => {
         if (!isGameOver) {
@@ -747,13 +803,16 @@
       canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver) player.jump(); });
     }
 
+    // =======================================================
+    // SHOP LOGIC
+    // =======================================================
     function buyUpgrade(upgradeName) {
       const upgrade = UPGRADES[upgradeName];
       const currentLevel = getUpgradeLevel(upgradeName);
       if (currentLevel < upgrade.maxLevel) {
         const cost = upgrade.costs[currentLevel];
         const requiredScore = upgrade.highScoreRequirement[currentLevel];
-        if (highScore < requiredScore) { console.warn(`Cannot buy. High Score of ${requiredScore} required.`); return; }
+        if (highScore < requiredScore) { alert(`High Score of ${requiredScore} required.`); return; }
         if (playerCoins >= cost) {
           playerCoins -= cost;
           const newLevel = currentLevel + 1;
@@ -763,6 +822,8 @@
           persistUserData();
           if (upgradeName === 'hacker') updateHackerButtonUI();
           if (upgradeName === 'time') updateTimeButtonUI();
+        } else {
+          alert('Not enough coins.');
         }
       }
     }
@@ -780,9 +841,33 @@
       if (key === 'magnet') magnetLevel = level;
     }
 
+    // Skins
+    function buySkin(skinName) {
+      if (skinName === 'santa') {
+        if (ownedSkins.santa) { alert('Already owned.'); return; }
+        if (playerCoins < 50) { alert('Not enough coins.'); return; }
+        playerCoins -= 50;
+        ownedSkins.santa = true;
+        document.getElementById('santa-owned').textContent = 'Yes';
+        coinCountElement.textContent = playerCoins;
+        updateShopUI();
+        persistUserData();
+      }
+    }
+    function equipSkin(skinName) {
+      if (skinName === 'santa' && !ownedSkins.santa) { alert('Skin not owned.'); return; }
+      equippedSkin = skinName;
+      document.getElementById('equipped-skin').textContent = equippedSkin;
+      if (player) player.setSkin(equippedSkin);
+      persistUserData();
+    }
+
     function updateShopUI() {
       shopCoinCountElement.textContent = playerCoins;
       shopHighScoreElement.textContent = highScore;
+      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
+      document.getElementById('equipped-skin').textContent = equippedSkin;
+
       Object.keys(UPGRADES).forEach(key => {
         const upgrade = UPGRADES[key];
         const currentLevel = getUpgradeLevel(key);
@@ -809,7 +894,7 @@
             reqElement.classList.remove('text-green-300'); reqElement.classList.add('text-red-300');
             canBuy = false;
           } else {
-            reqElement.textContent = requiredScore > 0 ? `High Score Requirement Met (${requiredScore} points)!` : `No High Score requirement.`;
+            reqElement.textContent = requiredScore > 0 ? `Requirement Met (${requiredScore})` : `No High Score requirement.`;
             reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
           }
           if (playerCoins < nextCost || !canBuy) {
@@ -858,6 +943,7 @@
       updateTimeButtonUI();
 
       player = new Player();
+      player.setSkin(equippedSkin);
       resizeCanvas();
       canvas.style.borderColor = '#e94560';
       lastTime = 0;
@@ -882,14 +968,14 @@
     }
 
     function update(deltaTime) {
-      // Constant score rate (independent of game speed)
-      score += deltaTime / 16; // ~60 points/sec steady
+      // Score
+      score += deltaTime / 16; // ~60 points/sec
       const uiScore = Math.floor(score / 10);
       scoreElement.textContent = uiScore;
 
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
 
-      // Speed ramp based on score
+      // Speed ramp
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
@@ -930,7 +1016,7 @@
         if (player.y > canvas.height + 50) { gameOver(); return; }
       }
 
-      // Obstacle spawn rate ramp (closer faster)
+      // Obstacle density ramp
       const initialRate = 100;
       const minRate = MIN_OBSTACLE_RATE;
       const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
@@ -960,7 +1046,7 @@
         coinSpawnTimer = 0;
       }
 
-      // Magnet behavior (attract coins)
+      // Magnet
       if (magnetLevel > 0) {
         const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
         coins.forEach(coin => {
@@ -1001,8 +1087,7 @@
             player.x + player.width > obs.x &&
             player.y < obs.y + obs.height &&
             player.y + player.height > obs.y) {
-          gameOver();
-          return;
+          gameOver(); return;
         }
       }
 
@@ -1013,7 +1098,7 @@
         if (hole.x + hole.width < 0) holes.splice(i, 1);
       }
 
-      // Traps (bear-trap style)
+      // Traps
       for (let i = traps.length - 1; i >= 0; i--) {
         const trap = traps[i];
         trap.update();
@@ -1023,12 +1108,11 @@
             player.x < trap.x + trap.width &&
             player.y + player.height >= trap.y) {
           trap.isTriggered = true;
-          gameOver(); // spikes snap shut and kill player
-          return;
+          gameOver(); return;
         }
       }
 
-      // Coins collection
+      // Coins
       for (let i = coins.length - 1; i >= 0; i--) {
         const coin = coins[i];
         coin.update();
@@ -1056,7 +1140,7 @@
       ctx.fillStyle = '#2d3748';
       ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-      // Order: holes/traps under obstacles
+      // Order
       holes.forEach(hole => hole.draw());
       traps.forEach(trap => trap.draw());
       obstacles.forEach(obs => obs.draw());
@@ -1066,7 +1150,7 @@
 
     function gameOver() {
       isGameOver = true;
-      const finalScore = Math.floor(score / 10); // consistent with HUD scoring
+      const finalScore = Math.floor(score / 10);
       finalScoreElement.textContent = finalScore;
       if (finalScore > highScore) {
         highScore = finalScore;
@@ -1091,10 +1175,8 @@
       handleInput();
       updateHackerButtonUI();
       updateTimeButtonUI();
-      // Close crouch on pointer/touch release anywhere to avoid sticky crouch
       window.addEventListener('mouseup', () => player?.crouch(false));
       window.addEventListener('touchend', () => player?.crouch(false));
     });
   </script>
 </body>
-</html>
