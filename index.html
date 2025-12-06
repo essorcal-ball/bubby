@@ -1,1407 +1,786 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stickman Jumper</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Arcade Hero</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #1a1a2e; }
-    .screen { display: none; height: 100vh; width: 100vw; transition: opacity 0.3s ease-in-out; box-sizing: border-box; }
-    .main-button { transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -2px rgba(0,0,0,0.1); }
-    .main-button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.2); }
-    .main-button:active { transform: translateY(0); box-shadow: none; }
-    #gameCanvas { background-color: #4a5568; border: 4px solid #e94560; border-radius: 12px; touch-action: manipulation; }
-    .game-status-box { background-color: #16213e; border-radius: 8px; padding: 12px 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-    .shop-card { background-color: #16213e; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s; }
-    .shop-card:hover { transform: translateY(-2px); border-color: #e94560; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background-color:#1a1a2e; }
+    .screen { display:none; height:100vh; width:100vw; box-sizing:border-box; }
+    .main-button { transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+    .main-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.45); }
+    #gameCanvas { background-color:#4a5568; border:4px solid #e94560; border-radius:12px; touch-action: manipulation; }
+    .game-status-box { background-color:#16213e; border-radius:10px; padding:12px 20px; }
+    .shop-card { background-color:#16213e; border-radius:12px; padding:1rem; }
+    .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; width:100%; max-width:900px; }
+    .badge { background:#203463; border-radius:999px; padding:4px 10px; font-size:12px; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
 
-  <div id="app-container" class="w-full h-full">
-
-    <!-- Sticky Account Bar -->
-    <div id="account-bar" class="fixed top-0 right-0 flex items-center space-x-4 bg-[#16213e] px-4 py-2 rounded-bl-lg shadow-lg z-50">
-      <span class="text-yellow-400 font-semibold">
-        Logged in as: <span id="current-username">Guest</span>
-      </span>
-      <button onclick="logoutAccount()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">Logout</button>
-    </div>
-
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="screen flex flex-col items-center justify-center p-8">
-      <h1 class="text-5xl font-extrabold text-[#e94560] mb-8">Welcome to Arcade Hero</h1>
-      <div class="w-full max-w-sm space-y-4">
-        <input id="username-input" type="text" placeholder="Enter Username" class="w-full p-3 rounded-lg text-black" />
-        <div class="relative">
-          <input id="password-input" type="password" placeholder="Enter Password" class="w-full p-3 rounded-lg text-black pr-12" />
-          <button type="button" onclick="togglePassword('password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-        </div>
-        <div class="relative">
-          <input id="confirm-password-input" type="password" placeholder="Confirm Password" class="w-full p-3 rounded-lg text-black pr-12" />
-          <button type="button" onclick="togglePassword('confirm-password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-        </div>
-        <button onclick="createAccount()" class="main-button bg-green-600 text-white font-bold py-3 px-6 rounded-lg">Create Account</button>
-        <button onclick="loginAccount()" class="main-button bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Login</button>
-      </div>
-    </div>
-
-    <!-- MENU SCREEN -->
-    <div id="menu-screen" class="screen flex flex-col items-center justify-center p-4">
-      <h1 class="text-6xl md:text-8xl font-extrabold text-[#e94560] mb-12 animate-pulse tracking-widest">ARCADE HERO</h1>
-      <div class="flex flex-col space-y-6 w-full max-w-sm">
-        <button onclick="goToScreen('game')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">PLAY GAME</button>
-        <button onclick="goToScreen('shop')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">SHOP</button>
-      </div>
-    </div>
-
-    <!-- GAME SCREEN -->
-    <div id="game-screen" class="screen flex flex-col items-center justify-start py-8 px-4">
-      <div id="game-info" class="game-status-box flex justify-between w-full max-w-4xl mb-4">
-        <span class="text-xl font-semibold">Score: <span id="current-score">0</span></span>
-        <span class="text-xl font-semibold text-yellow-400">High Score: <span id="high-score">0</span></span>
-        <span class="text-xl font-semibold text-yellow-400">💰 Coins: <span id="coin-count">0</span></span>
-      </div>
-
-      <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
-
-      <div id="game-controls" class="mt-6 flex flex-wrap justify-center gap-4">
-        <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">JUMP</button>
-        <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">CROUCH (ArrowDown/S)</button>
-
-        <button id="hacker-button" onclick="activateHackerAbility()" class="main-button bg-purple-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
-          <div id="hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
-          <span id="hacker-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY IN SHOP</span>
-        </button>
-
-        <button id="time-button" onclick="activateTimeAbility()" class="main-button bg-blue-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
-          <div id="time-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
-          <span id="time-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY TIME</span>
-        </button>
-
-        <button onclick="startGame()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">Restart Game</button>
-        <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">← Quit</button>
-      </div>
-
-      <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
-        <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
-          <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
-          <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
-          <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">Try Again!</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SHOP SCREEN -->
-    <div id="shop-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
-      <h2 class="text-5xl font-bold text-[#e94560] mb-8">The Item Shop</h2>
-      <p class="text-xl mb-4 text-center max-w-lg">
-        💰 Your Coins: <span id="shop-coin-count" class="font-bold text-yellow-400">0</span>
-        | High Score: <span id="shop-high-score" class="font-bold text-yellow-400">0</span>
-      </p>
-      <p class="text-lg mb-8 text-center max-w-lg">Spend your hard-earned coins on upgrades and skins.</p>
-
-      <div class="w-full max-w-2xl space-y-6">
-        <!-- Time Ability -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-blue-400">Time Warp Ability (Active)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Temporal Slowdown (T)</p>
-            <p class="text-lg text-gray-300 mb-2">Temporarily slows the entire game.</p>
-            <p class="text-lg">Level: <span id="time-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="time-effect">Effect: Not yet purchased.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="time-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="time-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-time-button" onclick="buyUpgrade('time')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Hacker Ability -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-purple-400">Hacker Ability (Active)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Obstacle Bypass (X)</p>
-            <p class="text-lg text-gray-300 mb-2">Bypass obstacles instantly.</p>
-            <p class="text-lg">Level: <span id="hacker-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="hacker-effect">Effect: Not yet purchased.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="hacker-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="hacker-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-hacker-button" onclick="buyUpgrade('hacker')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Jump Upgrade -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-green-400">Jump Upgrade (Passive)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Multi-Jump Capability</p>
-            <p class="text-lg text-gray-300 mb-2">Jump additional times mid-air before landing.</p>
-            <p class="text-lg">Level: <span id="jump-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="jump-effect">Effect: Standard single jump.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="jump-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="jump-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-jump-button" onclick="buyUpgrade('jump')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Money Magnet -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-yellow-400">Money Magnet (Passive)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Coin Attraction Field</p>
-            <p class="text-lg text-gray-300 mb-2">Attracts coins towards you and increases their value.</p>
-            <p class="text-lg">Level: <span id="magnet-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="magnet-effect">Effect: No magnet. Collect coins normally (1 coin value).</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="magnet-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="magnet-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-magnet-button" onclick="buyUpgrade('magnet')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Skins Section -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
-          <p class="text-lg mb-2">Equipped: <span id="equipped-skin" class="font-bold text-green-400">default</span></p>
-
-          <!-- Santa Skin -->
-          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
-            <div class="flex items-center gap-4">
-              <canvas id="santa-preview" width="60" height="80"></canvas>
-              <div>
-                <p class="text-xl font-bold">Christmas Santa</p>
-                <p>Owned: <span id="santa-owned" class="font-bold text-green-400">No</span></p>
-              </div>
-            </div>
-            <div class="flex gap-2 items-center">
-              <p class="text-yellow-400 font-bold">Cost: 5</p>
-              <button onclick="buySkin('santa')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
-              <button onclick="equipSkin('santa')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
-            </div>
-          </div>
-
-          <!-- Ninja Skin -->
-          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
-            <div class="flex items-center gap-4">
-              <canvas id="ninja-preview" width="60" height="80"></canvas>
-              <div>
-                <p class="text-xl font-bold">Ninja</p>
-                <p>Owned: <span id="ninja-owned" class="font-bold text-green-400">No</span></p>
-              </div>
-            </div>
-            <div class="flex gap-2 items-center">
-              <p class="text-yellow-400 font-bold">Cost: 10</p>
-              <button onclick="buySkin('ninja')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
-              <button onclick="equipSkin('ninja')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
-            </div>
-          </div>
-
-          <!-- Robot Skin -->
-          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
-            <div class="flex items-center gap-4">
-              <canvas id="robot-preview" width="60" height="80"></canvas>
-              <div>
-                <p class="text-xl font-bold">Robot</p>
-                <p>Owned: <span id="robot-owned" class="font-bold text-green-400">No</span></p>
-              </div>
-            </div>
-            <div class="flex gap-2 items-center">
-              <p class="text-yellow-400 font-bold">Cost: 15</p>
-              <button onclick="buySkin('robot')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
-              <button onclick="equipSkin('robot')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
-            </div>
-          </div>
-
-          <!-- Pirate Skin -->
-          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between mb-4">
-            <div class="flex items-center gap-4">
-              <canvas id="pirate-preview" width="60" height="80"></canvas>
-              <div>
-                <p class="text-xl font-bold">Pirate</p>
-                <p>Owned: <span id="pirate-owned" class="font-bold text-green-400">No</span></p>
-              </div>
-            </div>
-            <div class="flex gap-2 items-center">
-              <p class="text-yellow-400 font-bold">Cost: 12</p>
-              <button onclick="buySkin('pirate')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
-              <button onclick="equipSkin('pirate')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
-            </div>
-          </div>
-
-          <!-- Rainbow Skin -->
-          <div class="bg-[#203463] p-4 rounded-lg flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <canvas id="rainbow-preview" width="60" height="80"></canvas>
-              <div>
-                <p class="text-xl font-bold">Rainbow Stickman</p>
-                <p>Owned: <span id="rainbow-owned" class="font-bold text-green-400">No</span></p>
-              </div>
-            </div>
-            <div class="flex gap-2 items-center">
-              <p class="text-yellow-400 font-bold">Cost: 20</p>
-              <button onclick="buySkin('rainbow')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-4 rounded-full">Buy</button>
-              <button onclick="equipSkin('rainbow')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">Equip</button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">← Back to Menu</button>
+  <!-- MENU -->
+  <div id="menu-screen" class="screen flex flex-col items-center justify-center p-6">
+    <h1 class="text-6xl md:text-7xl font-extrabold text-[#e94560] mb-10 tracking-widest">ARCADE HERO</h1>
+    <div class="flex flex-col gap-4 w-full max-w-sm">
+      <button onclick="goToScreen('game')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl">PLAY GAME</button>
+      <button onclick="goToScreen('shop')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl">SHOP</button>
     </div>
   </div>
 
-  <script>
-    // =======================================================
-    // ACCOUNT SYSTEM
-    // =======================================================
-    let currentUser = null;
-    const currentUsernameElement = document.getElementById('current-username');
+  <!-- GAME -->
+  <div id="game-screen" class="screen flex flex-col items-center justify-start py-8 px-4">
+    <div id="game-info" class="game-status-box flex justify-between items-center w-full max-w-4xl mb-4">
+      <span class="text-lg">Score: <span id="current-score" class="font-bold">0</span></span>
+      <span class="text-lg">High Score: <span id="high-score" class="font-bold">0</span></span>
+      <span class="text-lg">💰 Coins: <span id="coin-count" class="font-bold">0</span></span>
+      <span class="text-xs badge">Equipped: <span id="equipped-skin-display">default</span></span>
+    </div>
 
-    function getUserData(username) {
-      const data = localStorage.getItem(`stickmanUser_${username}`);
-      return data ? JSON.parse(data) : null;
+    <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
+
+    <div class="mt-6 flex flex-wrap justify-center gap-4">
+      <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg main-button">
+        JUMP
+      </button>
+      <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg main-button">
+        CROUCH (ArrowDown/S)
+      </button>
+      <button onclick="startGame()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg main-button">
+        Restart
+      </button>
+      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg main-button">
+        ← Quit
+      </button>
+    </div>
+
+    <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
+      <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
+        <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
+        <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
+        <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54]">
+          Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div id="shop-screen" class="screen flex flex-col items-center justify-start py-10 px-4">
+    <h2 class="text-5xl font-bold text-[#e94560] mb-4">The Item Shop</h2>
+    <p class="mb-6">Coins: <span id="shop-coin-count" class="font-bold text-yellow-300">0</span> • High Score: <span id="shop-high-score" class="font-bold text-yellow-300">0</span></p>
+    <p class="text-sm mb-8 text-gray-300">Buy a skin, then equip it. Skins are purely cosmetic.</p>
+
+    <div class="shop-grid">
+      <!-- Default -->
+      <div class="shop-card">
+        <canvas id="preview-default" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Default</p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('default')">Equip</button>
+          <span class="badge">Owned</span>
+        </div>
+      </div>
+
+      <!-- Santa -->
+      <div class="shop-card">
+        <canvas id="preview-santa" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Santa • Cost: 5</p>
+        <p>Owned: <span id="santa-owned">No</span></p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded main-button" onclick="buySkin('santa')">Buy</button>
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('santa')">Equip</button>
+        </div>
+      </div>
+
+      <!-- Ninja -->
+      <div class="shop-card">
+        <canvas id="preview-ninja" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Ninja • Cost: 10</p>
+        <p>Owned: <span id="ninja-owned">No</span></p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded main-button" onclick="buySkin('ninja')">Buy</button>
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('ninja')">Equip</button>
+        </div>
+      </div>
+
+      <!-- Robot -->
+      <div class="shop-card">
+        <canvas id="preview-robot" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Robot • Cost: 12</p>
+        <p>Owned: <span id="robot-owned">No</span></p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded main-button" onclick="buySkin('robot')">Buy</button>
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('robot')">Equip</button>
+        </div>
+      </div>
+
+      <!-- Pirate -->
+      <div class="shop-card">
+        <canvas id="preview-pirate" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Pirate • Cost: 8</p>
+        <p>Owned: <span id="pirate-owned">No</span></p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded main-button" onclick="buySkin('pirate')">Buy</button>
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('pirate')">Equip</button>
+        </div>
+      </div>
+
+      <!-- Rainbow -->
+      <div class="shop-card">
+        <canvas id="preview-rainbow" width="80" height="80"></canvas>
+        <p class="mt-2 font-semibold">Rainbow • Cost: 15</p>
+        <p>Owned: <span id="rainbow-owned">No</span></p>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded main-button" onclick="buySkin('rainbow')">Buy</button>
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded main-button" onclick="equipSkin('rainbow')">Equip</button>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg main-button mt-8">
+      ← Back to Menu
+    </button>
+  </div>
+
+<script>
+  // Screens
+  const screens = {
+    menu: document.getElementById('menu-screen'),
+    game: document.getElementById('game-screen'),
+    shop: document.getElementById('shop-screen')
+  };
+  let currentScreen = 'menu';
+
+  function goToScreen(target) {
+    Object.values(screens).forEach(s => s.style.display = 'none');
+    screens[target].style.display = 'flex';
+    currentScreen = target;
+    if (target === 'game') { resizeCanvas(); startGame(); }
+    if (target === 'shop') { updateShopUI(); renderPreviews(); }
+  }
+  window.onload = () => goToScreen('menu');
+
+  // Game setup
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const GROUND_HEIGHT = 50;
+  const PLAYER_SIZE = 40;
+
+  let player;
+  let obstacles = [];
+  let holes = [];
+  let traps = [];
+  let coins = [];
+  let score = 0;
+  let currentSpeed = 4.0;
+  const maxSpeedIncrease = 6.0;
+  const maxScoreForSpeed = 400;
+  let obstacleSpawnRate = 100;
+  const minObstacleRate = 20;
+  let obstacleSpawnTimer = 0;
+  let coinSpawnTimer = 0;
+  const COIN_SPAWN_RATE = 350;
+  let isGameOver = false;
+  let lastTime = 0;
+  let animationFrameId = null;
+
+  // UI
+  const scoreElement = document.getElementById('current-score');
+  const highScoreElement = document.getElementById('high-score');
+  const finalScoreElement = document.getElementById('final-score');
+  const coinCountElement = document.getElementById('coin-count');
+  const shopCoinCountElement = document.getElementById('shop-coin-count');
+  const shopHighScoreElement = document.getElementById('shop-high-score');
+  const gameOverModal = document.getElementById('game-over-modal');
+  const equippedDisplay = document.getElementById('equipped-skin-display');
+
+  // Progress
+  let highScore = 0;
+  let playerCoins = 0;
+
+  // Skins
+  let equippedSkin = 'default';
+  let ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
+  const skinCosts = { santa:5, ninja:10, robot:12, pirate:8, rainbow:15 };
+
+  function buySkin(name) {
+    if (ownedSkins[name]) return alert('Already owned.');
+    const cost = skinCosts[name] || 0;
+    if (playerCoins < cost) return alert('Not enough coins.');
+    playerCoins -= cost;
+    ownedSkins[name] = true;
+    coinCountElement.textContent = playerCoins;
+    updateShopUI();
+  }
+  function equipSkin(name) {
+    if (name !== 'default' && !ownedSkins[name]) return alert('Skin not owned.');
+    equippedSkin = name;
+    equippedDisplay.textContent = equippedSkin;
+    if (player) player.setSkin(equippedSkin);
+    updateShopUI();
+  }
+  function updateShopUI() {
+    shopCoinCountElement.textContent = playerCoins;
+    shopHighScoreElement.textContent = highScore;
+    document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
+    document.getElementById('ninja-owned').textContent = ownedSkins.ninja ? 'Yes' : 'No';
+    document.getElementById('robot-owned').textContent = ownedSkins.robot ? 'Yes' : 'No';
+    document.getElementById('pirate-owned').textContent = ownedSkins.pirate ? 'Yes' : 'No';
+    document.getElementById('rainbow-owned').textContent = ownedSkins.rainbow ? 'Yes' : 'No';
+    equippedDisplay.textContent = equippedSkin;
+  }
+
+  // Player
+  class Player {
+    constructor() {
+      this.width = PLAYER_SIZE / 2;
+      this.height = PLAYER_SIZE;
+      this.x = 50;
+      this.y = canvas.height - GROUND_HEIGHT - this.height;
+      this.velocityY = 0;
+      this.isCrouching = false;
+      this.skin = equippedSkin;
+      this.jumpCount = 0;
     }
-    function saveUserData(username, data) {
-      localStorage.setItem(`stickmanUser_${username}`, JSON.stringify(data));
+    setSkin(s) { this.skin = s; }
+    crouch(on) {
+      this.isCrouching = on;
+      this.height = on ? PLAYER_SIZE/2 : PLAYER_SIZE;
+      this.y = canvas.height - GROUND_HEIGHT - this.height;
     }
-    function togglePassword(fieldId) {
-      const passwordField = document.getElementById(fieldId);
-      const toggleButton = passwordField.nextElementSibling;
-      if (passwordField.type === "password") {
-        passwordField.type = "text"; toggleButton.textContent = "Hide";
-      } else {
-        passwordField.type = "password"; toggleButton.textContent = "Show";
+    jump() {
+      if (isGameOver || this.isCrouching) return;
+      const onGround = this.y >= canvas.height - GROUND_HEIGHT - this.height - 0.5;
+      const maxJumps = 2; // double jump default
+      if (onGround) this.jumpCount = 0;
+      if (this.jumpCount < maxJumps) {
+        this.velocityY = -12;
+        this.jumpCount++;
       }
     }
-    function createAccount() {
-      const username = document.getElementById('username-input').value.trim();
-      const password = document.getElementById('password-input').value.trim();
-      const confirmPassword = document.getElementById('confirm-password-input').value.trim();
-      if (!username || !password || !confirmPassword) { alert("Please fill in all fields."); return; }
-      if (password !== confirmPassword) { alert("Passwords do not match."); return; }
-      if (getUserData(username)) { alert("Account already exists. Please login."); return; }
-      const newUser = {
-        password,
-        coins:0,
-        highScore:0,
-        upgrades:{time:0,hacker:0,jump:0,magnet:0},
-        skins:{ owned:['default'], equipped:'default' }
-      };
-      saveUserData(username, newUser);
-      alert("Account created! Please login.");
-    }
-    function loginAccount() {
-      const username = document.getElementById('username-input').value.trim();
-      const password = document.getElementById('password-input').value.trim();
-      const userData = getUserData(username);
-      if (!userData) { alert("No account found. Please create one."); return; }
-      if (userData.password !== password) { alert("Incorrect password."); return; }
-      currentUser = username;
-      loadUserData(userData);
-      updateUserStatus();
-      goToScreen('menu');
-    }
-    function logoutAccount() {
-      if (!currentUser) { alert("No user is currently logged in."); return; }
-      persistUserData();
-      alert(`Logged out from ${currentUser}.`);
-      currentUser = null;
-      // Reset in-memory state
-      playerCoins = 0;
-      highScore = 0;
-      timeLevel = 0;
-      hackerLevel = 0;
-      jumpLevel = 0;
-      magnetLevel = 0;
-      ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
-      equippedSkin = 'default';
-      highScoreElement.textContent = highScore;
-      coinCountElement.textContent = playerCoins;
-      updateUserStatus();
-      goToScreen('login');
-    }
-    function loadUserData(userData) {
-      playerCoins = userData.coins;
-      highScore = userData.highScore;
-      timeLevel = userData.upgrades.time;
-      hackerLevel = userData.upgrades.hacker;
-      jumpLevel = userData.upgrades.jump;
-      magnetLevel = userData.upgrades.magnet;
-      // Skins
-      ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
-      userData.skins?.owned?.forEach(k => { if (ownedSkins.hasOwnProperty(k)) ownedSkins[k] = true; });
-      equippedSkin = userData.skins?.equipped || 'default';
-      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
-      document.getElementById('ninja-owned').textContent = ownedSkins.ninja ? 'Yes' : 'No';
-      document.getElementById('robot-owned').textContent = ownedSkins.robot ? 'Yes' : 'No';
-      document.getElementById('pirate-owned').textContent = ownedSkins.pirate ? 'Yes' : 'No';
-      document.getElementById('rainbow-owned').textContent = ownedSkins.rainbow ? 'Yes' : 'No';
-      document.getElementById('equipped-skin').textContent = equippedSkin;
-      highScoreElement.textContent = highScore;
-      coinCountElement.textContent = playerCoins;
-    }
-    function persistUserData() {
-      if (!currentUser) return;
-      const existing = getUserData(currentUser);
-      const ownedList = Object.keys(ownedSkins).filter(k => ownedSkins[k]);
-      const userData = {
-        password: existing?.password || '',
-        coins: playerCoins,
-        highScore: highScore,
-        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel },
-        skins: { owned: ownedList, equipped: equippedSkin }
-      };
-      saveUserData(currentUser, userData);
-    }
-    function updateUserStatus() {
-      currentUsernameElement.textContent = currentUser ? currentUser : "Guest";
-    }
-
-    // =======================================================
-    // NAVIGATION
-    // =======================================================
-    let currentScreen = 'login';
-    let animationFrameId = null;
-    let lastTime = 0;
-
-    const screens = {
-      login: document.getElementById('login-screen'),
-      menu: document.getElementById('menu-screen'),
-      game: document.getElementById('game-screen'),
-      shop: document.getElementById('shop-screen')
-    };
-    const gameOverModal = document.getElementById('game-over-modal');
-
-    function goToScreen(targetScreen) {
-      if ((targetScreen === 'game' || targetScreen === 'shop') && !currentUser) {
-        alert("You must log in first!");
-        targetScreen = 'login';
-      }
-      if (currentScreen === targetScreen) return;
-      if (currentScreen === 'game') stopGame();
-      Object.values(screens).forEach(screen => { if (screen) screen.style.display = 'none'; });
-      if (screens[targetScreen]) {
-        screens[targetScreen].style.display = 'flex';
-        currentScreen = targetScreen;
-        if (targetScreen === 'game') {
-          resizeCanvas();
-          startGame();
-        } else if (targetScreen === 'shop') {
-          updateShopUI();
-          drawAllPreviews();
+    draw() {
+      // Base stickman stroke per skin
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      // Skin stroke color or gradient
+      switch (this.skin) {
+        case 'santa':
+          ctx.strokeStyle = '#ff0000';
+          break;
+        case 'ninja':
+          ctx.strokeStyle = '#111111';
+          break;
+        case 'robot':
+          ctx.strokeStyle = '#9aa0a6';
+          break;
+        case 'pirate':
+          ctx.strokeStyle = '#8b5a2b';
+          break;
+        case 'rainbow': {
+          const g = ctx.createLinearGradient(this.x, this.y - 20, this.x, this.y + 40);
+          g.addColorStop(0, 'red');
+          g.addColorStop(0.2, 'orange');
+          g.addColorStop(0.4, 'yellow');
+          g.addColorStop(0.6, 'green');
+          g.addColorStop(0.8, 'blue');
+          g.addColorStop(1, 'violet');
+          ctx.strokeStyle = g;
+          break;
         }
-      } else {
-        console.error(`Unknown screen: ${targetScreen}`);
-      }
-    }
-
-    window.onload = () => {
-      goToScreen('login');
-      updateUserStatus();
-      drawAllPreviews();
-    };
-    window.addEventListener('resize', () => {
-      if (currentScreen === 'game') resizeCanvas();
-    });
-
-    // =======================================================
-    // GAME CONSTANTS
-    // =======================================================
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const GRAVITY = 0.6;
-    const JUMP_VELOCITY = -12;
-
-    const BASE_GAME_SPEED = 4.0;
-    const MAX_GAME_SPEED_INCREASE = 6.0;
-    const MAX_SCORE_FOR_SPEED = 400;
-    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300;
-    let obstacleSpawnRate = 100;
-    const MIN_OBSTACLE_RATE = 20;
-
-    const GROUND_HEIGHT = 50;
-    const PLAYER_SIZE = 40;
-    const magnetForce = 0.025;
-
-    let player;
-    let obstacles = [];
-    let coins = [];
-    let holes = [];
-    let traps = [];
-    let score = 0;
-    let currentSpeed = BASE_GAME_SPEED;
-
-    let highScore = 0;
-    let playerCoins = 0;
-
-    let timeLevel = 0;
-    let hackerLevel = 0;
-    let jumpLevel = 0;
-    let magnetLevel = 0;
-
-    let jumpCount = 0;
-    let isFalling = false;
-
-    let isHackerAbilityReady = true;
-    let hackerCooldownRemaining = 0;
-
-    let isTimeAbilityReady = true;
-    let timeCooldownRemaining = 0;
-    let timeEffectRemaining = 0;
-
-    let isGameOver = false;
-    let obstacleSpawnTimer = 0;
-    let coinSpawnTimer = 0;
-    const COIN_SPAWN_RATE = 350;
-
-    let equippedSkin = 'default';
-    let ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, rainbow:false };
-
-    // =======================================================
-    // UPGRADES SETUP
-    // =======================================================
-    const TIME_UPGRADE = {
-      costs: [12, 20, 35],
-      cooldowns: [30000, 20000, 35000],
-      highScoreRequirement: [400, 300, 0],
-      effectDuration: [4000, 5000, 6000],
-      slowdownFactor: [0.7, 0.5, 'BASE'],
-      maxLevel: 3,
-      effect: (level) => {
-        if (level === 0) return 'Not yet purchased.';
-        const cd = TIME_UPGRADE.cooldowns[level - 1] / 1000;
-        if (level === 3) return `Cooldown: ${cd}s. Resets speed to base for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
-        const factor = TIME_UPGRADE.slowdownFactor[level-1];
-        return `Cooldown: ${cd}s. Slows speed to ${Math.floor(factor * 100)}% for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
-      }
-    };
-
-    const HACKER_UPGRADE = {
-      costs: [10, 25, 40],
-      cooldowns: [9000, 13000, 16000],
-      highScoreRequirement: [400, 550, 800],
-      maxLevel: 3,
-      effect: (level) => {
-        if (level === 0) return 'Not yet purchased.';
-        if (level === 1) return 'Cooldown: 9s. Bypasses 1 obstacle.';
-        if (level === 2) return 'Cooldown: 13s. Bypasses 2 obstacles.';
-        if (level === 3) return 'Cooldown: 16s. Bypasses 3 obstacles & holes.';
-      }
-    };
-
-    const JUMP_UPGRADE = {
-      costs: [20, 60],
-      highScoreRequirement: [400, 650],
-      maxLevels: [2, 3],
-      maxLevel: 2,
-      effect: (level) => {
-        if (level === 0) return 'Standard single jump.';
-        if (level === 1) return `Double Jump (${JUMP_UPGRADE.maxLevels[0]} jumps).`;
-        if (level === 2) return `Triple Jump (${JUMP_UPGRADE.maxLevels[1]} jumps).`;
-      }
-    };
-
-    const MAGNET_UPGRADE = {
-      costs: [40, 80],
-      highScoreRequirement: [300, 800],
-      values: [2, 3],  // 2x, 3x
-      radii: [150, 300],
-      maxLevel: 2,
-      effect: (level) => {
-        if (level === 0) return 'No magnet. Coins worth 1.';
-        if (level === 1) return 'Magnet active. Coins worth 2x.';
-        if (level === 2) return 'Strong magnet. Coins worth 3x.';
-      }
-    };
-    const UPGRADES = { time: TIME_UPGRADE, hacker: HACKER_UPGRADE, jump: JUMP_UPGRADE, magnet: MAGNET_UPGRADE };
-
-    // UI elements
-    const scoreElement = document.getElementById('current-score');
-    const highScoreElement = document.getElementById('high-score');
-    const finalScoreElement = document.getElementById('final-score');
-    const coinCountElement = document.getElementById('coin-count');
-    const shopCoinCountElement = document.getElementById('shop-coin-count');
-    const shopHighScoreElement = document.getElementById('shop-high-score');
-
-    const hackerButton = document.getElementById('hacker-button');
-    const hackerCooldownOverlay = document.getElementById('hacker-cooldown-overlay');
-    const hackerCooldownText = document.getElementById('hacker-cooldown-text');
-
-    const timeButton = document.getElementById('time-button');
-    const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
-    const timeCooldownText = document.getElementById('time-cooldown-text');
-
-    // =======================================================
-    // CLASSES
-    // =======================================================
-    class Player {
-      constructor() {
-        this.width = PLAYER_SIZE / 2;
-        this.height = PLAYER_SIZE;
-        this.x = 50;
-        this.y = canvas.height - GROUND_HEIGHT - this.height;
-        this.velocityY = 0;
-        this.isCrouching = false;
-        this.skin = equippedSkin;
-      }
-      setSkin(skinName) { this.skin = skinName; }
-      crouch(on) {
-        this.isCrouching = on;
-        this.height = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
-        this.y = canvas.height - GROUND_HEIGHT - this.height;
-      }
-      jump() {
-        if (!isGameOver && !isFalling && !this.isCrouching) {
-          let maxJumps = 1;
-          if (jumpLevel === 1) maxJumps = JUMP_UPGRADE.maxLevels[0];
-          if (jumpLevel === 2) maxJumps = JUMP_UPGRADE.maxLevels[1];
-          if (jumpCount < maxJumps) {
-            this.velocityY = JUMP_VELOCITY;
-            jumpCount++;
-          }
-        }
-      }
-      draw() {
-        switch (this.skin) {
-          case 'santa': {
-            // Body
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(this.x, this.y, this.width, 5);
-
-            // Head
-            ctx.beginPath();
-            ctx.arc(this.x + this.width/2, this.y - 10, 10, 0, Math.PI*2);
-            ctx.fillStyle = '#ffe0bd';
-            ctx.fill();
-
-            // Hat brim
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(this.x + this.width/2 - 12, this.y - 20, 24, 5);
-
-            // Hat triangle
-            ctx.fillStyle = '#ff0000';
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.width/2, this.y - 20);
-            ctx.lineTo(this.x + this.width/2 - 12, this.y - 40);
-            ctx.lineTo(this.x + this.width/2 + 12, this.y - 40);
-            ctx.closePath();
-            ctx.fill();
-
-            // Hat pom
-            ctx.beginPath();
-            ctx.arc(this.x + this.width/2, this.y - 42, 5, 0, Math.PI*2);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-            break;
-          }
-          case 'ninja': {
-            ctx.fillStyle = '#000';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(this.x, this.y - 5, this.width, 5); // headband
-            break;
-          }
-          case 'robot': {
-            ctx.fillStyle = '#888';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#0ff';
-            ctx.fillRect(this.x + 5, this.y - 10, 5, 5);
-            ctx.fillRect(this.x + 15, this.y - 10, 5, 5);
-            break;
-          }
-          case 'pirate': {
-            ctx.fillStyle = '#964B00';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(this.x + 5, this.y - 10, 10, 10); // hat
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(this.x + 15, this.y - 5, 5, 5); // eyepatch
-            break;
-          }
-          case 'rainbow': {
-            const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
-            gradient.addColorStop(0, 'red');
-            gradient.addColorStop(0.25, 'orange');
-            gradient.addColorStop(0.5, 'yellow');
-            gradient.addColorStop(0.75, 'green');
-            gradient.addColorStop(1, 'blue');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            break;
-          }
-          default: {
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            // Head
-            ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-            // Body
-            const bodyTop = this.y + 10;
-            const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
-            ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-            // Arms
-            ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-            // Legs
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
-            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
-            ctx.stroke();
-            break;
-          }
-        }
-      }
-    }
-
-    class Coin {
-      constructor() {
-        this.size = 15;
-        this.x = canvas.width;
-        this.color = '#FFD700';
-        this.baseValue = 1;
-        this.isMagnetized = false;
-        this.magnetSpeedX = 0;
-        this.magnetSpeedY = 0;
-        const level = Math.floor(Math.random() * 3);
-        if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
-        else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
-        else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
-      }
-      update() {
-        if (this.isMagnetized) {
-          this.x += this.magnetSpeedX;
-          this.y += this.magnetSpeedY;
-        }
-        this.x -= currentSpeed;
-      }
-      draw() {
-        ctx.fillStyle = this.color;
-        if (this.isMagnetized) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 10; }
-        ctx.beginPath();
-        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-      }
-    }
-
-    class Obstacle {
-      constructor(type) {
-        this.type = type;
-        this.width = 20 + Math.random() * 20;
-        this.defaultColor = type === 'ground' ? '#ff6b6b' : '#647DEE';
-        this.color = this.defaultColor;
-        this.isBypassed = false;
-        if (type === 'ground') {
-          this.height = 20 + Math.random() * 30;
-          this.x = canvas.width;
-          this.y = canvas.height - GROUND_HEIGHT - this.height;
-        } else {
-          this.height = 15;
-          this.width = 40 + Math.random() * 30;
-          this.x = canvas.width;
-          this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
-          this.vy = 0.3; // swoop speed
-        }
-      }
-      update() {
-        this.x -= currentSpeed;
-        if (this.type === 'air' && Math.floor(score / 10) >= 250) {
-          this.y += this.vy; // fly downward toward player
-        }
-      }
-      draw() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        if (this.type === 'ground' && this.color === this.defaultColor) {
-          ctx.fillStyle = 'rgba(0,0,0,0.2)';
-          ctx.fillRect(this.x, canvas.height - GROUND_HEIGHT, this.width, 10);
-        }
-      }
-    }
-
-    class Hole {
-      constructor() {
-        this.width = 75 + Math.random() * 75;
-        this.x = canvas.width;
-        this.y = canvas.height - GROUND_HEIGHT;
-        this.height = GROUND_HEIGHT;
-        this.isHazard = true;
-        this.isBypassed = false;
-        this.color = '#16213e';
-      }
-      update() { this.x -= currentSpeed; }
-      draw() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + this.width, this.y);
-        ctx.stroke();
-      }
-    }
-
-    class Trap {
-      constructor() {
-        this.width = 40 + Math.random() * 20; // shorter, subtle
-        this.x = canvas.width;
-        this.y = canvas.height - GROUND_HEIGHT;
-        this.height = GROUND_HEIGHT;
-        this.isTriggered = false;
-        this.color = '#0d0000'; // near-black red
-        this.animationProgress = 0; // 0 → 1 for swinging jaws
-      }
-      update() {
-        this.x -= currentSpeed;
-        if (this.isTriggered && this.animationProgress < 1) {
-          this.animationProgress += 0.05;
-        }
-      }
-      draw() {
-        // Base trap strip
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-
-        if (this.isTriggered) {
-          // Two swinging sticks with spikes
-          const stickLength = 25;
-          const stickWidth = 6;
-          const baseX = this.x + this.width / 2;
-          const baseY = this.y;
-
-          // Left jaw swings up-right
-          ctx.save();
-          ctx.translate(baseX - 10, baseY);
-          ctx.rotate(-Math.PI / 3 * this.animationProgress);
-          ctx.fillStyle = '#a10000';
-          ctx.fillRect(-stickWidth / 2, -stickLength, stickWidth, stickLength);
-          // spikes on left jaw
-          ctx.fillStyle = '#dc2626';
-          for (let s = 0; s < stickLength; s += 6) {
-            ctx.beginPath();
-            ctx.moveTo(0, -s);
-            ctx.lineTo(4, -s - 6);
-            ctx.lineTo(-4, -s - 6);
-            ctx.closePath();
-            ctx.fill();
-          }
-          ctx.restore();
-
-          // Right jaw swings up-left
-          ctx.save();
-          ctx.translate(baseX + 10, baseY);
-          ctx.rotate(Math.PI / 3 * this.animationProgress);
-          ctx.fillStyle = '#a10000';
-          ctx.fillRect(-stickWidth / 2, -stickLength, stickWidth, stickLength);
-          // spikes on right jaw
-          ctx.fillStyle = '#dc2626';
-          for (let s = 0; s < stickLength; s += 6) {
-            ctx.beginPath();
-            ctx.moveTo(0, -s);
-            ctx.lineTo(4, -s - 6);
-            ctx.lineTo(-4, -s - 6);
-            ctx.closePath();
-            ctx.fill();
-          }
-          ctx.restore();
-        }
-      }
-    }
-
-    // =======================================================
-    // ABILITIES
-    // =======================================================
-    function activateHackerAbility() {
-      if (hackerLevel === 0 || !isHackerAbilityReady || isGameOver) return;
-      isHackerAbilityReady = false;
-      const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
-      hackerCooldownRemaining = currentCooldown;
-
-      let bypassCount = 1;
-      if (hackerLevel === 2) bypassCount = 2;
-      if (hackerLevel === 3) bypassCount = 3;
-
-      // Collect obstacles ahead (and holes if Lv3)
-      let targets = obstacles.filter(obs => obs.x > player.x && !obs.isBypassed);
-      if (hackerLevel === 3) {
-        const holeTargets = holes.filter(h => !h.isBypassed && h.x > player.x);
-        targets = targets.concat(holeTargets);
+        default:
+          ctx.strokeStyle = '#ffffff';
       }
 
-      for (let i = 0; i < bypassCount && i < targets.length; i++) {
-        const target = targets[i];
-        if (target instanceof Obstacle) {
-          target.isBypassed = true;
-          target.color = '#059669'; // green for bypassed obstacle
-        } else if (target instanceof Hole) {
-          target.isBypassed = true;
-          target.color = '#34d399'; // bright green for safe hole
-        }
-      }
-      updateHackerButtonUI();
-    }
+      const cx = this.x + this.width/2;
+      const headY = this.y - 10;
+      const bodyTop = this.y;
+      const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
 
-    function activateTimeAbility() {
-      if (timeLevel === 0 || !isTimeAbilityReady || isGameOver) return;
-      isTimeAbilityReady = false;
-      const currentCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
-      timeCooldownRemaining = currentCooldown;
-      const factor = TIME_UPGRADE.slowdownFactor[timeLevel - 1];
-      currentSpeed = factor === 'BASE' ? BASE_GAME_SPEED : currentSpeed * factor;
-      timeEffectRemaining = TIME_UPGRADE.effectDuration[timeLevel - 1];
-      canvas.style.borderColor = '#60a5fa';
-      updateTimeButtonUI();
-    }
+      // Head
+      ctx.beginPath();
+      ctx.arc(cx, headY, 10, 0, Math.PI*2);
+      ctx.stroke();
 
-    function updateHackerButtonUI() {
-      if (hackerLevel === 0) {
-        hackerButton.disabled = true;
-        hackerCooldownText.textContent = 'BUY IN SHOP';
-        hackerCooldownOverlay.style.height = '100%';
-        return;
-      }
-      if (isHackerAbilityReady) {
-        hackerButton.disabled = false;
-        hackerCooldownText.textContent = 'READY (X)';
-        hackerCooldownOverlay.style.height = '0%';
-        hackerButton.classList.remove('bg-gray-700');
-        hackerButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
-      } else {
-        hackerButton.disabled = true;
-        hackerButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
-        hackerButton.classList.add('bg-gray-700');
-        const totalCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
-        const remainingSec = Math.ceil(hackerCooldownRemaining / 1000);
-        const percent = (hackerCooldownRemaining / totalCooldown) * 100;
-        hackerCooldownText.textContent = `${remainingSec}s`;
-        hackerCooldownOverlay.style.height = `${percent}%`;
-      }
-    }
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(cx, bodyTop);
+      ctx.lineTo(cx, bodyBottom);
+      ctx.stroke();
 
-    function updateTimeButtonUI() {
-      if (timeLevel === 0) {
-        timeButton.disabled = true;
-        timeCooldownText.textContent = 'BUY IN SHOP';
-        timeCooldownOverlay.style.height = '100%';
-        return;
-      }
-      if (timeEffectRemaining > 0) {
-        timeButton.disabled = true;
-        const remainingEffectSec = Math.ceil(timeEffectRemaining / 1000);
-        timeCooldownText.textContent = `WARP: ${remainingEffectSec}s`;
-        timeCooldownOverlay.style.height = '0%';
-        timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-gray-700');
-        timeButton.classList.add('bg-blue-800');
-        return;
-      }
-      if (isTimeAbilityReady) {
-        timeButton.disabled = false;
-        timeCooldownText.textContent = 'READY (T)';
-        timeCooldownOverlay.style.height = '0%';
-        timeButton.classList.remove('bg-gray-700');
-        timeButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
-      } else {
-        timeButton.disabled = true;
-        timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        timeButton.classList.add('bg-gray-700');
-        const totalCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
-        const remainingSec = Math.ceil(timeCooldownRemaining / 1000);
-        const percent = (timeCooldownRemaining / totalCooldown) * 100;
-        timeCooldownText.textContent = `${remainingSec}s`;
-        timeCooldownOverlay.style.height = `${percent}%`;
-      }
-    }
+      // Arms
+      ctx.beginPath();
+      ctx.moveTo(cx, this.y + (this.isCrouching ? 10 : 8));
+      ctx.lineTo(this.x - 10, this.y + (this.isCrouching ? 15 : 12));
+      ctx.moveTo(cx, this.y + (this.isCrouching ? 10 : 8));
+      ctx.lineTo(this.x + this.width + 10, this.y + (this.isCrouching ? 15 : 12));
+      ctx.stroke();
 
-    // =======================================================
-    // INPUT
-    // =======================================================
-    function handleInput() {
-      document.addEventListener('keydown', (e) => {
-        if (!isGameOver) {
-          if (e.code === 'Space' || e.code === 'Enter') player.jump();
-          if (e.key === 'x' || e.key === 'X') activateHackerAbility();
-          if (e.key === 't' || e.key === 'T') activateTimeAbility();
-          if (e.key === 'ArrowDown' || e.key === 's') player.crouch(true);
-        }
-      });
-      document.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowDown' || e.key === 's') player.crouch(false);
-      });
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(cx, bodyBottom);
+      ctx.lineTo(this.x - 8, this.y + this.height);
+      ctx.moveTo(cx, bodyBottom);
+      ctx.lineTo(this.x + this.width + 8, this.y + this.height);
+      ctx.stroke();
 
-      document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver) player.jump(); });
-
-      const crouchButton = document.getElementById('crouch-button');
-      crouchButton.addEventListener('mousedown', () => player.crouch(true));
-      crouchButton.addEventListener('mouseup', () => player.crouch(false));
-      crouchButton.addEventListener('mouseleave', () => player.crouch(false));
-      crouchButton.addEventListener('touchstart', (e) => { e.preventDefault(); player.crouch(true); });
-      crouchButton.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
-
-      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver) player.jump(); });
-    }
-
-    // =======================================================
-    // SHOP LOGIC (Upgrades + Skins)
-    // =======================================================
-    function buyUpgrade(upgradeName) {
-      const upgrade = UPGRADES[upgradeName];
-      const currentLevel = getUpgradeLevel(upgradeName);
-      if (currentLevel < upgrade.maxLevel) {
-        const cost = upgrade.costs[currentLevel];
-        const requiredScore = upgrade.highScoreRequirement[currentLevel];
-        if (highScore < requiredScore) { alert(`High Score of ${requiredScore} required.`); return; }
-        if (playerCoins >= cost) {
-          playerCoins -= cost;
-          const newLevel = currentLevel + 1;
-          setUpgradeLevel(upgradeName, newLevel);
-          coinCountElement.textContent = playerCoins;
-          updateShopUI();
-          persistUserData();
-          if (upgradeName === 'hacker') updateHackerButtonUI();
-          if (upgradeName === 'time') updateTimeButtonUI();
-        } else {
-          alert('Not enough coins.');
-        }
-      }
-    }
-    function getUpgradeLevel(key) {
-      if (key === 'time') return timeLevel;
-      if (key === 'hacker') return hackerLevel;
-      if (key === 'jump') return jumpLevel;
-      if (key === 'magnet') return magnetLevel;
-      return 0;
-    }
-    function setUpgradeLevel(key, level) {
-      if (key === 'time') timeLevel = level;
-      if (key === 'hacker') hackerLevel = level;
-      if (key === 'jump') jumpLevel = level;
-      if (key === 'magnet') magnetLevel = level;
-    }
-
-    const skinCosts = { santa:5, ninja:10, robot:15, pirate:12, rainbow:20 };
-    function buySkin(skinName) {
-      if (ownedSkins[skinName]) { alert('Already owned.'); return; }
-      const cost = skinCosts[skinName] || 0;
-      if (playerCoins < cost) { alert('Not enough coins.'); return; }
-      playerCoins -= cost;
-      ownedSkins[skinName] = true;
-      coinCountElement.textContent = playerCoins;
-      const ownedEl = document.getElementById(`${skinName}-owned`);
-      if (ownedEl) ownedEl.textContent = 'Yes';
-      updateShopUI();
-      persistUserData();
-    }
-    function equipSkin(skinName) {
-      if (!ownedSkins[skinName]) { alert('Skin not owned.'); return; }
-      equippedSkin = skinName;
-      document.getElementById('equipped-skin').textContent = equippedSkin;
-      if (player) player.setSkin(equippedSkin);
-      persistUserData();
-    }
-
-    function updateShopUI() {
-      shopCoinCountElement.textContent = playerCoins;
-      shopHighScoreElement.textContent = highScore;
-      // Owned flags
-      ['santa','ninja','robot','pirate','rainbow'].forEach(k => {
-        const el = document.getElementById(`${k}-owned`);
-        if (el) el.textContent = ownedSkins[k] ? 'Yes' : 'No';
-      });
-      document.getElementById('equipped-skin').textContent = equippedSkin;
-
-      Object.keys(UPGRADES).forEach(key => {
-        const upgrade = UPGRADES[key];
-        const currentLevel = getUpgradeLevel(key);
-        const levelElement = document.getElementById(`${key}-level`);
-        const effectElement = document.getElementById(`${key}-effect`);
-        const costElement = document.getElementById(`${key}-cost`);
-        const buyButton = document.getElementById(`buy-${key}-button`);
-        const reqElement = document.getElementById(`${key}-req`);
-        if (!levelElement || !buyButton) return;
-
-        levelElement.textContent = currentLevel;
-        effectElement.textContent = upgrade.effect(currentLevel);
-
-        if (currentLevel < upgrade.maxLevel) {
-          const nextLevel = currentLevel + 1;
-          const nextCost = upgrade.costs[currentLevel];
-          const requiredScore = upgrade.highScoreRequirement[currentLevel];
-          costElement.textContent = `Cost: ${nextCost} Coins`;
-          buyButton.textContent = `Buy Level ${nextLevel}`;
-
-          let canBuy = true;
-          if (requiredScore > 0 && highScore < requiredScore) {
-            reqElement.textContent = `Required High Score: ${requiredScore} points.`;
-            reqElement.classList.remove('text-green-300'); reqElement.classList.add('text-red-300');
-            canBuy = false;
-          } else {
-            reqElement.textContent = requiredScore > 0 ? `Requirement Met (${requiredScore})` : `No High Score requirement.`;
-            reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
-          }
-          if (playerCoins < nextCost || !canBuy) {
-            buyButton.disabled = true;
-            if (playerCoins < nextCost) buyButton.textContent = 'Not Enough Coins';
-            else if (!canBuy) buyButton.textContent = 'Score Too Low';
-          } else {
-            buyButton.disabled = false;
-          }
-        } else {
-          costElement.textContent = 'MAX LEVEL';
-          buyButton.textContent = 'MAXED OUT';
-          buyButton.disabled = true;
-          reqElement.textContent = 'You have maxed out this upgrade.';
-          reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
-        }
-      });
-    }
-
-    // =======================================================
-    // PREVIEWS
-    // =======================================================
-    function drawSkinPreview(canvasId, skinName) {
-      const c = document.getElementById(canvasId);
-      if (!c) return;
-      const pctx = c.getContext('2d');
-      pctx.clearRect(0,0,c.width,c.height);
-      const x = 20, y = 40, w = 20, h = 30;
-      switch (skinName) {
+      // Accessories per skin
+      switch (this.skin) {
         case 'santa': {
-          // Body
-          pctx.fillStyle = '#ff0000';
-          pctx.fillRect(x, y, w, h);
-          pctx.fillStyle = '#fff';
-          pctx.fillRect(x, y, w, 4);
-          // Head
-          pctx.beginPath(); pctx.arc(x + w/2, y - 10, 10, 0, Math.PI*2); pctx.fillStyle = '#ffe0bd'; pctx.fill();
           // Hat brim
-          pctx.fillStyle = '#fff'; pctx.fillRect(x + w/2 - 12, y - 20, 24, 4);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(cx - 14, headY - 12, 28, 4);
           // Hat triangle
-          pctx.fillStyle = '#ff0000';
-          pctx.beginPath();
-          pctx.moveTo(x + w/2, y - 20);
-          pctx.lineTo(x + w/2 - 12, y - 40);
-          pctx.lineTo(x + w/2 + 12, y - 40);
-          pctx.closePath();
-          pctx.fill();
+          ctx.fillStyle = '#ff0000';
+          ctx.beginPath();
+          ctx.moveTo(cx - 14, headY - 12);
+          ctx.lineTo(cx + 14, headY - 12);
+          ctx.lineTo(cx, headY - 32);
+          ctx.closePath();
+          ctx.fill();
           // Pom
-          pctx.beginPath(); pctx.arc(x + w/2, y - 42, 4, 0, Math.PI*2); pctx.fillStyle = '#fff'; pctx.fill();
+          ctx.beginPath();
+          ctx.arc(cx, headY - 34, 5, 0, Math.PI*2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
           break;
         }
         case 'ninja': {
-          pctx.fillStyle = '#000'; pctx.fillRect(x, y, w, h);
-          pctx.fillStyle = '#ff0000'; pctx.fillRect(x, y - 5, w, 4);
+          // Headband
+          ctx.strokeStyle = '#dc2626';
+          ctx.beginPath();
+          ctx.moveTo(cx - 12, headY);
+          ctx.lineTo(cx + 12, headY);
+          ctx.stroke();
+          // Eyes slit
+          ctx.strokeStyle = '#000';
           break;
         }
         case 'robot': {
-          pctx.fillStyle = '#888'; pctx.fillRect(x, y, w, h);
-          pctx.fillStyle = '#0ff'; pctx.fillRect(x + 5, y - 10, 4, 4); pctx.fillRect(x + 11, y - 10, 4, 4);
+          // Antenna
+          ctx.strokeStyle = '#9aa0a6';
+          ctx.beginPath();
+          ctx.moveTo(cx, headY - 10);
+          ctx.lineTo(cx, headY - 18);
+          ctx.stroke();
+          ctx.fillStyle = '#64b5f6';
+          ctx.beginPath();
+          ctx.arc(cx, headY - 18, 3, 0, Math.PI*2);
+          ctx.fill();
           break;
         }
         case 'pirate': {
-          pctx.fillStyle = '#964B00'; pctx.fillRect(x, y, w, h);
-          pctx.fillStyle = '#000'; pctx.fillRect(x + 5, y - 12, 10, 8);
-          pctx.fillStyle = '#fff'; pctx.fillRect(x + 14, y - 5, 4, 4);
+          // Eye patch
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.arc(cx - 4, headY, 3, 0, Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle = '#000';
+          ctx.beginPath();
+          ctx.moveTo(cx - 4, headY + 3);
+          ctx.lineTo(cx, headY + 8);
+          ctx.stroke();
+          // Bandana
+          ctx.strokeStyle = '#b91c1c';
+          ctx.beginPath();
+          ctx.moveTo(cx - 14, headY - 6);
+          ctx.lineTo(cx + 14, headY - 6);
+          ctx.stroke();
           break;
         }
         case 'rainbow': {
-          const g = pctx.createLinearGradient(x, y, x, y + h);
-          g.addColorStop(0, 'red'); g.addColorStop(0.25, 'orange'); g.addColorStop(0.5, 'yellow'); g.addColorStop(0.75, 'green'); g.addColorStop(1, 'blue');
-          pctx.fillStyle = g; pctx.fillRect(x, y, w, h);
-          break;
-        }
-        default: {
-          pctx.strokeStyle = '#fff'; pctx.lineWidth = 2;
-          pctx.beginPath(); pctx.arc(x + w/2, y - 8, 6, 0, Math.PI*2); pctx.stroke();
-          pctx.beginPath(); pctx.moveTo(x + w/2, y); pctx.lineTo(x + w/2, y + 16); pctx.stroke();
+          // Sparkle
+          ctx.fillStyle = 'white';
+          ctx.globalAlpha = 0.6;
+          ctx.fillRect(cx - 2, headY - 16, 4, 4);
+          ctx.globalAlpha = 1.0;
           break;
         }
       }
     }
-    function drawAllPreviews() {
-      drawSkinPreview('santa-preview','santa');
-      drawSkinPreview('ninja-preview','ninja');
-      drawSkinPreview('robot-preview','robot');
-      drawSkinPreview('pirate-preview','pirate');
-      drawSkinPreview('rainbow-preview','rainbow');
-    }
+  }
 
-    // =======================================================
-    // GAME LOOP
-    // =======================================================
-    function startGame() {
-      stopGame();
-      gameOverModal.style.display = 'none';
-      isGameOver = false;
-      score = 0;
-      obstacles = [];
-      coins = [];
-      holes = [];
-      traps = [];
-      isFalling = false;
-      obstacleSpawnTimer = 0;
-      coinSpawnTimer = 0;
-      currentSpeed = BASE_GAME_SPEED;
-
-      // Reset ability state
-      jumpCount = 0;
-      isHackerAbilityReady = true;
-      hackerCooldownRemaining = 0;
-      isTimeAbilityReady = true;
-      timeCooldownRemaining = 0;
-      timeEffectRemaining = 0;
-
-      updateHackerButtonUI();
-      updateTimeButtonUI();
-
-      player = new Player();
-      player.setSkin(equippedSkin);
-      resizeCanvas();
-      canvas.style.borderColor = '#e94560';
-      lastTime = 0;
-      animationFrameId = requestAnimationFrame(gameLoop);
-    }
-
-    function stopGame() {
-      if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
-      persistUserData();
-    }
-
-    function gameLoop(currentTime) {
-      if (!lastTime) lastTime = currentTime;
-      const deltaTime = Math.min(currentTime - lastTime, 100);
-      lastTime = currentTime;
-
-      if (isGameOver) { stopGame(); return; }
-
-      update(deltaTime);
-      draw();
-      animationFrameId = requestAnimationFrame(gameLoop);
-    }
-
-    function update(deltaTime) {
-      // Score
-      score += deltaTime / 16; // ~60 points/sec
-      const uiScore = Math.floor(score / 10);
-      scoreElement.textContent = uiScore;
-
-      const groundY = canvas.height - GROUND_HEIGHT - player.height;
-
-      // Speed ramp
-      const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
-      const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
-      if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
-
-      // Cooldowns/effects
-      if (hackerCooldownRemaining > 0) {
-        hackerCooldownRemaining -= deltaTime;
-        if (hackerCooldownRemaining <= 0) { hackerCooldownRemaining = 0; isHackerAbilityReady = true; }
-        updateHackerButtonUI();
-      }
-      if (timeCooldownRemaining > 0) {
-        timeCooldownRemaining -= deltaTime;
-        if (timeCooldownRemaining <= 0) { timeCooldownRemaining = 0; isTimeAbilityReady = true; }
-        updateTimeButtonUI();
-      }
-      if (timeEffectRemaining > 0) {
-        timeEffectRemaining -= deltaTime;
-        if (timeEffectRemaining <= 0) { timeEffectRemaining = 0; currentSpeed = calculatedSpeed; }
-        updateTimeButtonUI();
-      }
-
-      // Player physics
-      if (!isFalling) {
-        player.velocityY += GRAVITY;
-        player.y += player.velocityY;
-
-        if (player.y >= groundY) {
-          let fallingIntoHole = false;
-          for (const hole of holes) {
-            if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { fallingIntoHole = true; break; }
-          }
-          if (fallingIntoHole) { isFalling = true; player.velocityY = 0; }
-          else { player.y = groundY; player.velocityY = 0; jumpCount = 0; }
-        }
+  // Obstacles
+  class Obstacle {
+    constructor(type) {
+      this.type = type;
+      this.width = 20 + Math.random()*20;
+      this.isBypassed = false;
+      if (type === 'ground') {
+        this.height = 20 + Math.random()*30;
+        this.x = canvas.width;
+        this.y = canvas.height - GROUND_HEIGHT - this.height;
+        this.color = '#ff6b6b';
       } else {
-        player.velocityY += GRAVITY * 3;
-        player.y += player.velocityY;
-        if (player.y > canvas.height + 50) { gameOver(); return; }
-      }
-
-      // Obstacle density ramp
-      const initialRate = 100;
-      const minRate = MIN_OBSTACLE_RATE;
-      const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
-      const rateReduction = (initialRate - minRate) * difficultyFactor;
-      obstacleSpawnRate = initialRate - rateReduction;
-
-      // Spawning
-      obstacleSpawnTimer++;
-      if (obstacleSpawnTimer >= obstacleSpawnRate) {
-        if (Math.random() < 0.15) holes.push(new Hole());
-        else {
-          const type = Math.random() < 0.7 ? 'ground' : 'air';
-          obstacles.push(new Obstacle(type));
-        }
-        obstacleSpawnTimer = 0;
-      }
-
-      // Traps spawn independently after 200 points
-      if (Math.floor(score / 10) >= 200 && Math.random() < 0.02) {
-        traps.push(new Trap());
-      }
-
-      // Coins
-      coinSpawnTimer++;
-      if (coinSpawnTimer >= COIN_SPAWN_RATE) {
-        if (Math.random() < 0.6) coins.push(new Coin());
-        coinSpawnTimer = 0;
-      }
-
-      // Magnet
-      if (magnetLevel > 0) {
-        const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
-        coins.forEach(coin => {
-          const dx = (player.x + player.width / 2) - (coin.x + coin.size / 2);
-          const dy = (player.y + player.height / 2) - (coin.y + coin.size / 2);
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          coin.isMagnetized = false;
-
-          if (distance < magnetRadius) {
-            let shouldMagnetize = false;
-            const isOverheadX = (coin.x + coin.size > player.x) && (coin.x < player.x + player.width);
-            const isHigherY = coin.y < player.y + player.height / 2;
-            if (magnetLevel === 1 && isOverheadX && isHigherY) shouldMagnetize = true;
-            else if (magnetLevel === 2) shouldMagnetize = true;
-
-            if (shouldMagnetize) {
-              coin.isMagnetized = true;
-              const forceMultiplier = (magnetRadius - distance) / magnetRadius;
-              const accelX = dx / distance * magnetForce * deltaTime * forceMultiplier;
-              const accelY = dy / distance * magnetForce * deltaTime * forceMultiplier;
-              coin.magnetSpeedX += accelX;
-              coin.magnetSpeedY += accelY;
-            }
-          } else {
-            coin.magnetSpeedX = 0;
-            coin.magnetSpeedY = 0;
-          }
-        });
-      }
-
-      // Obstacles and collisions
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        obs.update();
-        if (obs.x + obs.width < 0) { obstacles.splice(i, 1); continue; }
-        if (obs.isBypassed) continue;
-        if (player.x < obs.x + obs.width &&
-            player.x + player.width > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + player.height > obs.y) {
-          gameOver(); return;
-        }
-      }
-
-      // Holes
-      for (let i = holes.length - 1; i >= 0; i--) {
-        const hole = holes[i];
-        hole.update();
-        if (hole.x + hole.width < 0) holes.splice(i, 1);
-      }
-
-      // Traps
-      for (let i = traps.length - 1; i >= 0; i--) {
-        const trap = traps[i];
-        trap.update();
-        if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
-        if (!trap.isTriggered &&
-            player.x + player.width > trap.x &&
-            player.x < trap.x + trap.width &&
-            player.y + player.height >= trap.y) {
-          trap.isTriggered = true;
-          gameOver(); return;
-        }
-      }
-
-      // Coins
-      for (let i = coins.length - 1; i >= 0; i--) {
-        const coin = coins[i];
-        coin.update();
-
-        if (player.x < coin.x + coin.size &&
-            player.x + player.width > coin.x &&
-            player.y < coin.y + coin.size &&
-            player.y + player.height > coin.y) {
-          let value = coin.baseValue;
-          if (magnetLevel === 1) value = MAGNET_UPGRADE.values[0]; // 2x
-          else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1]; // 3x
-          playerCoins += value;
-          coinCountElement.textContent = playerCoins;
-          coins.splice(i, 1);
-          persistUserData();
-          continue;
-        }
-        if (coin.x + coin.size < 0) coins.splice(i, 1);
+        this.height = 15;
+        this.width = 40 + Math.random()*30;
+        this.x = canvas.width;
+        this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE*2.5 - Math.random()*50;
+        this.color = '#647DEE';
       }
     }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Ground
-      ctx.fillStyle = '#2d3748';
-      ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
-
-      // Order
-      holes.forEach(hole => hole.draw());
-      traps.forEach(trap => trap.draw());
-      obstacles.forEach(obs => obs.draw());
-      coins.forEach(coin => coin.draw());
-      if (player) player.draw();
-    }
-
-    function gameOver() {
-      isGameOver = true;
-      const finalScore = Math.floor(score / 10);
-      finalScoreElement.textContent = finalScore;
-      if (finalScore > highScore) {
-        highScore = finalScore;
-        highScoreElement.textContent = highScore;
+    update() { this.x -= currentSpeed; }
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+      if (this.type === 'ground') {
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(this.x, canvas.height - GROUND_HEIGHT, this.width, 10);
       }
-      persistUserData();
-      gameOverModal.style.display = 'flex';
     }
+  }
 
-    function resizeCanvas() {
-      const container = canvas.parentElement;
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-      if (player) {
-        const groundY = canvas.height - GROUND_HEIGHT - player.height;
-        if (player.y > groundY && !isFalling) player.y = groundY;
+  // Holes
+  class Hole {
+    constructor() {
+      this.width = 75 + Math.random()*75;
+      this.x = canvas.width;
+      this.y = canvas.height - GROUND_HEIGHT;
+      this.height = GROUND_HEIGHT;
+      this.color = '#16213e';
+    }
+    update() { this.x -= currentSpeed; }
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.width, this.y);
+      ctx.stroke();
+    }
+  }
+
+  // Traps (bear-trap style) — base color almost ground, slightly red-tinted
+  class Trap {
+    constructor() {
+      this.width = 50 + Math.random()*30;
+      this.x = canvas.width;
+      this.y = canvas.height - GROUND_HEIGHT;
+      this.height = GROUND_HEIGHT;
+      this.isTriggered = false;
+      this.animationProgress = 0; // 0 -> 1 swing up
+      this.baseColor = '#3a2a2a'; // subtle red tint (ground is #2d3748)
+    }
+    update() {
+      this.x -= currentSpeed;
+      if (this.isTriggered && this.animationProgress < 1) {
+        this.animationProgress += 0.06; // swing speed
       }
-      if (ctx) draw();
     }
+    draw() {
+      // Base (camouflaged slab)
+      ctx.fillStyle = this.baseColor;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
 
-    window.addEventListener('load', () => {
-      handleInput();
-      updateHackerButtonUI();
-      updateTimeButtonUI();
-      window.addEventListener('mouseup', () => player?.crouch(false));
-      window.addEventListener('touchend', () => player?.crouch(false));
+      // Jaws swing up from ground and close
+      if (this.isTriggered) {
+        const jawLen = 24;
+        const jawWidth = 6;
+        const baseX = this.x + this.width/2;
+        const baseY = this.y;
+
+        // Left jaw: swings up-right
+        ctx.save();
+        ctx.translate(baseX - 12, baseY);
+        ctx.rotate(-Math.PI/2 * this.animationProgress);
+        ctx.fillStyle = '#a10000';
+        ctx.fillRect(-jawWidth/2, -jawLen, jawWidth, jawLen);
+        ctx.restore();
+
+        // Right jaw: swings up-left
+        ctx.save();
+        ctx.translate(baseX + 12, baseY);
+        ctx.rotate(Math.PI/2 * this.animationProgress);
+        ctx.fillStyle = '#a10000';
+        ctx.fillRect(-jawWidth/2, -jawLen, jawWidth, jawLen);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Coins
+  class Coin {
+    constructor() {
+      this.size = 15;
+      this.x = canvas.width;
+      const level = Math.floor(Math.random()*3);
+      if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE*3.5;
+      else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE*1.5;
+      else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE*0.5;
+      this.color = '#FFD700';
+    }
+    update() { this.x -= currentSpeed; }
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Input
+  function handleInput() {
+    document.addEventListener('keydown', (e) => {
+      if (isGameOver) return;
+      if (e.code === 'Space' || e.code === 'Enter') player.jump();
+      if (e.key === 'ArrowDown' || e.key === 's') player.crouch(true);
     });
-  </script>
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 's') player.crouch(false);
+    });
+
+    document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver) player.jump(); });
+    const crouchBtn = document.getElementById('crouch-button');
+    crouchBtn.addEventListener('mousedown', () => player.crouch(true));
+    crouchBtn.addEventListener('mouseup', () => player.crouch(false));
+    crouchBtn.addEventListener('mouseleave', () => player.crouch(false));
+    crouchBtn.addEventListener('touchstart', (e) => { e.preventDefault(); player.crouch(true); });
+    crouchBtn.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver) player.jump(); });
+    window.addEventListener('mouseup', () => player?.crouch(false));
+    window.addEventListener('touchend', () => player?.crouch(false));
+  }
+
+  // Game loop
+  function startGame() {
+    stopGame();
+    score = 0;
+    obstacles = [];
+    holes = [];
+    traps = [];
+    coins = [];
+    isGameOver = false;
+    obstacleSpawnTimer = 0;
+    coinSpawnTimer = 0;
+    currentSpeed = 4.0;
+    player = new Player();
+    player.setSkin(equippedSkin);
+    gameOverModal.style.display = 'none';
+    canvas.style.borderColor = '#e94560';
+    lastTime = 0;
+    animationFrameId = requestAnimationFrame(gameLoop);
+  }
+  function stopGame() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+  }
+
+  function gameLoop(currentTime) {
+    if (!lastTime) lastTime = currentTime;
+    const deltaTime = Math.min(currentTime - lastTime, 100);
+    lastTime = currentTime;
+
+    if (isGameOver) { stopGame(); return; }
+    update(deltaTime);
+    draw();
+    animationFrameId = requestAnimationFrame(gameLoop);
+  }
+
+  function update(deltaTime) {
+    // Score and speed ramp
+    score += deltaTime / 16;
+    const uiScore = Math.floor(score / 10);
+    scoreElement.textContent = uiScore;
+
+    const speedFactor = Math.min(uiScore / maxScoreForSpeed, 1);
+    currentSpeed = 4.0 + maxSpeedIncrease * speedFactor;
+
+    // Player physics
+    const groundY = canvas.height - GROUND_HEIGHT - player.height;
+    player.velocityY += 0.6;
+    player.y += player.velocityY;
+    if (player.y >= groundY) {
+      player.y = groundY;
+      player.velocityY = 0;
+      player.jumpCount = 0;
+    }
+
+    // Spawn difficulty ramp
+    const initialRate = 100;
+    const difficultyFactor = Math.min(uiScore / 300, 1);
+    obstacleSpawnRate = initialRate - (initialRate - minObstacleRate) * difficultyFactor;
+
+    // Spawning
+    obstacleSpawnTimer++;
+    if (obstacleSpawnTimer >= obstacleSpawnRate) {
+      if (Math.random() < 0.15) holes.push(new Hole());
+      else {
+        const type = Math.random() < 0.7 ? 'ground' : 'air';
+        obstacles.push(new Obstacle(type));
+      }
+      obstacleSpawnTimer = 0;
+    }
+    if (uiScore >= 200 && Math.random() < 0.02) traps.push(new Trap());
+
+    coinSpawnTimer++;
+    if (coinSpawnTimer >= COIN_SPAWN_RATE) {
+      if (Math.random() < 0.6) coins.push(new Coin());
+      coinSpawnTimer = 0;
+    }
+
+    // Update entities
+    obstacles.forEach(o => o.update());
+    holes.forEach(h => h.update());
+    traps.forEach(t => t.update());
+    coins.forEach(c => c.update());
+
+    // Cleanup
+    obstacles = obstacles.filter(o => o.x + o.width >= 0);
+    holes = holes.filter(h => h.x + h.width >= 0);
+    traps = traps.filter(t => t.x + t.width >= 0);
+    coins = coins.filter(c => c.x + c.size >= 0);
+
+    // Collisions: obstacles
+    for (const obs of obstacles) {
+      if (rectsOverlap(player.x, player.y, player.width, player.height, obs.x, obs.y, obs.width, obs.height)) {
+        return gameOver();
+      }
+    }
+    // Holes: if feet over hole edge while on ground, trigger drop — simplified: gameOver on contact at ground line
+    for (const hole of holes) {
+      const touchingGround = player.y + player.height >= canvas.height - GROUND_HEIGHT;
+      const overX = (player.x + player.width) > hole.x && player.x < (hole.x + hole.width);
+      if (touchingGround && overX) {
+        return gameOver();
+      }
+    }
+    // Traps
+    for (const trap of traps) {
+      const overlap = rectsOverlap(player.x, player.y, player.width, player.height, trap.x, trap.y, trap.width, trap.height);
+      if (!trap.isTriggered && overlap) {
+        trap.isTriggered = true;
+        return gameOver();
+      }
+    }
+    // Coins
+    for (let i = coins.length - 1; i >= 0; i--) {
+      const c = coins[i];
+      if (rectsOverlap(player.x, player.y, player.width, player.height, c.x, c.y, c.size, c.size)) {
+        playerCoins += 1;
+        coinCountElement.textContent = playerCoins;
+        coins.splice(i, 1);
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Ground
+    ctx.fillStyle = '#2d3748';
+    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+
+    // Order
+    holes.forEach(h => h.draw());
+    traps.forEach(t => t.draw());
+    obstacles.forEach(o => o.draw());
+    coins.forEach(c => c.draw());
+    player.draw();
+  }
+
+  function gameOver() {
+    isGameOver = true;
+    const finalScore = Math.floor(score / 10);
+    finalScoreElement.textContent = finalScore;
+    if (finalScore > highScore) {
+      highScore = finalScore;
+      highScoreElement.textContent = highScore;
+    }
+    gameOverModal.style.display = 'flex';
+  }
+
+  // Utils
+  function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  function resizeCanvas() {
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    if (player) {
+      const groundY = canvas.height - GROUND_HEIGHT - player.height;
+      if (player.y > groundY) player.y = groundY;
+    }
+    draw();
+  }
+  window.addEventListener('resize', () => { if (currentScreen === 'game') resizeCanvas(); });
+
+  // Input init
+  handleInput();
+
+  // Shop previews
+  function renderPreviews() {
+    drawPreview('preview-default', 'default');
+    drawPreview('preview-santa', 'santa');
+    drawPreview('preview-ninja', 'ninja');
+    drawPreview('preview-robot', 'robot');
+    drawPreview('preview-pirate', 'pirate');
+    drawPreview('preview-rainbow', 'rainbow');
+  }
+  function drawPreview(id, skin) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    const pctx = c.getContext('2d');
+    pctx.clearRect(0,0,c.width,c.height);
+    const x = 20, y = 45, w = 20, h = 30;
+    const cx = x + w/2;
+    // Stroke color
+    switch (skin) {
+      case 'santa': pctx.strokeStyle = '#ff0000'; break;
+      case 'ninja': pctx.strokeStyle = '#111111'; break;
+      case 'robot': pctx.strokeStyle = '#9aa0a6'; break;
+      case 'pirate': pctx.strokeStyle = '#8b5a2b'; break;
+      case 'rainbow': {
+        const g = pctx.createLinearGradient(x, y-20, x, y+40);
+        g.addColorStop(0,'red'); g.addColorStop(0.25,'orange'); g.addColorStop(0.5,'yellow'); g.addColorStop(0.75,'green'); g.addColorStop(1,'blue');
+        pctx.strokeStyle = g; break;
+      }
+      default: pctx.strokeStyle = '#ffffff';
+    }
+    pctx.lineWidth = 3;
+    // Head
+    pctx.beginPath(); pctx.arc(cx, y-10, 8, 0, Math.PI*2); pctx.stroke();
+    // Body
+    pctx.beginPath(); pctx.moveTo(cx, y); pctx.lineTo(cx, y+20); pctx.stroke();
+    // Arms
+    pctx.beginPath(); pctx.moveTo(cx, y+6); pctx.lineTo(x-6, y+10);
+    pctx.moveTo(cx, y+6); pctx.lineTo(x+w+6, y+10); pctx.stroke();
+    // Legs
+    pctx.beginPath(); pctx.moveTo(cx, y+20); pctx.lineTo(x, y+h);
+    pctx.moveTo(cx, y+20); pctx.lineTo(x+w, y+h); pctx.stroke();
+
+    // Accessories
+    if (skin === 'santa') {
+      pctx.fillStyle = '#fff';
+      pctx.fillRect(cx-12, y-18, 24, 4);
+      pctx.fillStyle = '#ff0000';
+      pctx.beginPath();
+      pctx.moveTo(cx-12, y-18);
+      pctx.lineTo(cx+12, y-18);
+      pctx.lineTo(cx, y-32);
+      pctx.closePath();
+      pctx.fill();
+      pctx.beginPath(); pctx.arc(cx, y-34, 4, 0, Math.PI*2); pctx.fillStyle='#fff'; pctx.fill();
+    }
+    if (skin === 'ninja') {
+      pctx.strokeStyle = '#dc2626';
+      pctx.beginPath(); pctx.moveTo(cx-12, y-6); pctx.lineTo(cx+12, y-6); pctx.stroke();
+    }
+    if (skin === 'robot') {
+      pctx.strokeStyle = '#9aa0a6';
+      pctx.beginPath(); pctx.moveTo(cx, y-16); pctx.lineTo(cx, y-22); pctx.stroke();
+      pctx.fillStyle = '#64b5f6'; pctx.beginPath(); pctx.arc(cx, y-22, 3, 0, Math.PI*2); pctx.fill();
+    }
+    if (skin === 'pirate') {
+      pctx.fillStyle = '#000'; pctx.beginPath(); pctx.arc(cx-3, y-10, 3, 0, Math.PI*2); pctx.fill();
+      pctx.strokeStyle = '#000'; pctx.beginPath(); pctx.moveTo(cx-3, y-8); pctx.lineTo(cx, y-2); pctx.stroke();
+    }
+  }
+</script>
 </body>
 </html>
