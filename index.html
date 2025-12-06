@@ -61,6 +61,32 @@
 
     <div id="app-container" class="w-full h-full">
 
+        <!-- Sticky Account Bar -->
+        <div id="account-bar" 
+             class="fixed top-0 right-0 flex items-center space-x-4 bg-[#16213e] px-4 py-2 rounded-bl-lg shadow-lg z-50">
+            <span class="text-yellow-400 font-semibold">
+                Logged in as: <span id="current-username">Guest</span>
+            </span>
+            <button onclick="logoutAccount()" 
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                Logout
+            </button>
+        </div>
+
+        <!-- 0. LOGIN SCREEN -->
+        <div id="login-screen" class="screen flex flex-col items-center justify-center p-8">
+            <h1 class="text-5xl font-extrabold text-[#e94560] mb-8">Welcome to Arcade Hero</h1>
+            <div class="w-full max-w-sm space-y-4">
+                <input id="username-input" type="text" placeholder="Enter Username" class="w-full p-3 rounded-lg text-black" />
+                <button onclick="createAccount()" class="main-button bg-green-600 text-white font-bold py-3 px-6 rounded-lg">
+                    Create Account
+                </button>
+                <button onclick="loginAccount()" class="main-button bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">
+                    Login
+                </button>
+            </div>
+        </div>
+
         <!-- 1. MAIN MENU SCREEN -->
         <div id="menu-screen" class="screen flex flex-col items-center justify-center p-4">
             <h1 class="text-6xl md:text-8xl font-extrabold text-[#e94560] mb-12 animate-pulse tracking-widest">
@@ -253,14 +279,99 @@
 
     <script>
         // =======================================================
+        // ACCOUNT SYSTEM
+        // =======================================================
+        let currentUser = null; // Track logged-in user
+        const currentUsernameElement = document.getElementById('current-username');
+
+        function getUserData(username) {
+            const data = localStorage.getItem(`stickmanUser_${username}`);
+            return data ? JSON.parse(data) : null;
+        }
+
+        function saveUserData(username, data) {
+            localStorage.setItem(`stickmanUser_${username}`, JSON.stringify(data));
+        }
+
+        function createAccount() {
+            const username = document.getElementById('username-input').value.trim();
+            if (!username) { alert("Please enter a username."); return; }
+            if (getUserData(username)) { alert("Account already exists. Please login."); return; }
+            const newUser = { coins: 0, highScore: 0, upgrades: { time: 0, hacker: 0, jump: 0, magnet: 0 } };
+            saveUserData(username, newUser);
+            alert("Account created! Please login.");
+        }
+
+        function loginAccount() {
+            const username = document.getElementById('username-input').value.trim();
+            const userData = getUserData(username);
+            if (!userData) { alert("No account found. Please create one."); return; }
+            currentUser = username;
+            loadUserData(userData);
+            updateUserStatus();
+            goToScreen('menu');
+        }
+
+        function logoutAccount() {
+            if (!currentUser) { alert("No user is currently logged in."); return; }
+            persistUserData();
+            alert(`Logged out from ${currentUser}.`);
+            currentUser = null;
+
+            // Reset in-memory game state (neutral)
+            playerCoins = 0;
+            highScore = 0;
+            timeLevel = 0;
+            hackerLevel = 0;
+            jumpLevel = 0;
+            magnetLevel = 0;
+
+            // Update UI
+            highScoreElement.textContent = highScore;
+            coinCountElement.textContent = playerCoins;
+            updateUserStatus();
+
+            // Return to login
+            goToScreen('login');
+        }
+
+        function loadUserData(userData) {
+            playerCoins = userData.coins;
+            highScore = userData.highScore;
+            timeLevel = userData.upgrades.time;
+            hackerLevel = userData.upgrades.hacker;
+            jumpLevel = userData.upgrades.jump;
+            magnetLevel = userData.upgrades.magnet;
+
+            // Update UI
+            highScoreElement.textContent = highScore;
+            coinCountElement.textContent = playerCoins;
+        }
+
+        function persistUserData() {
+            if (!currentUser) return;
+            const userData = {
+                coins: playerCoins,
+                highScore: highScore,
+                upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel }
+            };
+            saveUserData(currentUser, userData);
+        }
+
+        function updateUserStatus() {
+            currentUsernameElement.textContent = currentUser ? currentUser : "Guest";
+        }
+
+        // =======================================================
         // MENU NAVIGATION LOGIC
         // =======================================================
         
-        let currentScreen = 'menu';
+        let currentScreen = 'login';
         let animationFrameId = null; 
         let lastTime = 0; 
 
         const screens = {
+            login: document.getElementById('login-screen'),
             menu: document.getElementById('menu-screen'),
             game: document.getElementById('game-screen'),
             shop: document.getElementById('shop-screen')
@@ -269,9 +380,16 @@
 
         /**
          * Switches the visibility of the screens based on the target name.
-         * @param {string} targetScreen - The ID suffix of the screen to show ('menu', 'game', 'shop').
+         * Blocks game/shop unless logged in.
+         * @param {string} targetScreen - The ID suffix of the screen to show ('login', 'menu', 'game', 'shop').
          */
         function goToScreen(targetScreen) {
+            // Block access to game and shop if not logged in
+            if ((targetScreen === 'game' || targetScreen === 'shop') && !currentUser) {
+                alert("You must log in first!");
+                targetScreen = 'login';
+            }
+
             if (currentScreen === targetScreen) return; 
 
             // Stop the game if we are leaving the game screen
@@ -291,11 +409,9 @@
                 
                 // Start the game if we are entering the game screen
                 if (targetScreen === 'game') {
-                    // Set canvas size initially
                     resizeCanvas(); 
                     startGame();
                 } else if (targetScreen === 'shop') {
-                    // Update the shop UI when entering the screen
                     updateShopUI();
                 }
             } else {
@@ -303,9 +419,10 @@
             }
         }
 
-        // Initialize the app to the main menu screen
+        // Initialize the app to the login screen
         window.onload = () => {
-            goToScreen('menu'); 
+            goToScreen('login'); 
+            updateUserStatus();
         };
         
         // Listen for screen resize to keep canvas responsive
@@ -334,26 +451,27 @@
         const PLAYER_SIZE = 40; 
         const magnetForce = 0.025; 
 
-        // Game State (Persistent via LocalStorage)
+        // Game State (now stored per account via persistUserData)
         let player;
         let obstacles = [];
         let coins = []; 
-        let holes = []; // New array for hole obstacles
+        let holes = [];
         let score = 0; 
         let currentSpeed = BASE_GAME_SPEED; 
         
-        let highScore = parseInt(localStorage.getItem('stickmanHighScore') || '0', 10); 
-        let playerCoins = parseInt(localStorage.getItem('stickmanCoins') || '0', 10); 
+        // In-memory values (are loaded/saved through account system)
+        let highScore = 0; 
+        let playerCoins = 0; 
         
-        // --- UPGRADE LEVELS (Stored in localStorage) ---
-        let timeLevel = parseInt(localStorage.getItem('timeLevel') || '0', 10);
-        let hackerLevel = parseInt(localStorage.getItem('hackerLevel') || '0', 10); 
-        let jumpLevel = parseInt(localStorage.getItem('jumpLevel') || '0', 10);
-        let magnetLevel = parseInt(localStorage.getItem('magnetLevel') || '0', 10);
+        // --- UPGRADE LEVELS (per account) ---
+        let timeLevel = 0;
+        let hackerLevel = 0; 
+        let jumpLevel = 0;
+        let magnetLevel = 0;
         
         // --- GAME MECHANIC STATE ---
         let jumpCount = 0; 
-        let isFalling = false; // New state for falling animation
+        let isFalling = false;
         
         // Hacker State
         let isHackerAbilityReady = true;
@@ -371,7 +489,7 @@
         let obstacleSpawnRate = 120; 
         const COIN_SPAWN_RATE = 350; 
 
-        // --- UPGRADE DATA (Unchanged) ---
+        // --- UPGRADE DATA ---
         const TIME_UPGRADE = {
             stateKey: 'timeLevel',
             costs: [12, 20, 30], 
@@ -434,7 +552,6 @@
             magnet: MAGNET_UPGRADE
         };
 
-
         // UI Elements
         const scoreElement = document.getElementById('current-score');
         const highScoreElement = document.getElementById('high-score');
@@ -454,11 +571,7 @@
         const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
         const timeCooldownText = document.getElementById('time-cooldown-text');
         
-        // Update initial displays
-        highScoreElement.textContent = highScore;
-        coinCountElement.textContent = playerCoins;
-
-        // Player Class (minimal update, position handled in main loop)
+        // Player Class
         class Player {
             constructor() {
                 this.width = PLAYER_SIZE / 2;
@@ -482,7 +595,6 @@
             }
 
             draw() {
-                // Stickman drawing logic 
                 ctx.strokeStyle = '#FFFFFF'; 
                 ctx.lineWidth = 3;
                 ctx.lineCap = 'round';
@@ -514,7 +626,7 @@
             }
         }
 
-        // Coin Class (unchanged)
+        // Coin Class
         class Coin {
             constructor() {
                 this.size = 15;
@@ -563,8 +675,7 @@
             }
         }
 
-
-        // Obstacle Class (unchanged)
+        // Obstacle Class
         class Obstacle {
             constructor(type) {
                 this.type = type;
@@ -600,14 +711,13 @@
             }
         }
         
-        // Hole Class (Updated for larger size)
+        // Hole Class
         class Hole {
             constructor() {
-                // Increased width range from 50-100 to 75-150
                 this.width = 75 + Math.random() * 75; // Variable width
                 this.x = canvas.width;
-                this.y = canvas.height - GROUND_HEIGHT; // Starts at ground level
-                this.height = GROUND_HEIGHT; // Visual height for ground collision check
+                this.y = canvas.height - GROUND_HEIGHT;
+                this.height = GROUND_HEIGHT;
                 this.isHazard = true;
             }
 
@@ -616,11 +726,9 @@
             }
 
             draw() {
-                // Draw the hole as a dark gap on the ground
-                ctx.fillStyle = '#16213e'; // Match the game background color for a "hole" effect
+                ctx.fillStyle = '#16213e'; // Match background for "hole" effect
                 ctx.fillRect(this.x, this.y, this.width, this.height);
                 
-                // Add a simple visual rim or shadow for depth
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -631,14 +739,13 @@
         }
 
         // =======================================================
-        // ABILITY LOGIC (Unchanged)
+        // ABILITY LOGIC
         // =======================================================
 
         function activateHackerAbility() {
             if (hackerLevel === 0 || !isHackerAbilityReady) return;
             
             isHackerAbilityReady = false;
-            
             const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
             hackerCooldownRemaining = currentCooldown;
 
@@ -658,7 +765,6 @@
             if (timeLevel === 0 || !isTimeAbilityReady || isGameOver) return;
             
             isTimeAbilityReady = false;
-            
             const currentCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
             timeCooldownRemaining = currentCooldown;
             
@@ -679,9 +785,8 @@
         }
 
         // =======================================================
-        // UI UPDATE LOGIC (Unchanged)
+        // UI UPDATE LOGIC
         // =======================================================
-
         function updateHackerButtonUI() {
             if (hackerLevel === 0) {
                 hackerButton.disabled = true;
@@ -728,7 +833,6 @@
                  return;
             }
 
-
             if (isTimeAbilityReady) {
                 timeButton.disabled = false;
                 timeCooldownText.textContent = 'READY (T)'; 
@@ -748,7 +852,6 @@
                 timeCooldownOverlay.style.height = `${percent}%`; 
             }
         }
-
 
         // Handle Player Input (Jump, Hacker, Time)
         function handleInput() {
@@ -777,9 +880,8 @@
         }
 
         // =======================================================
-        // SHOP LOGIC (Unchanged)
+        // SHOP LOGIC
         // =======================================================
-
         function buyUpgrade(upgradeName) {
             const upgrade = UPGRADES[upgradeName];
             const currentLevel = getUpgradeLevel(upgradeName);
@@ -798,10 +900,12 @@
                     const newLevel = currentLevel + 1;
                     
                     setUpgradeLevel(upgradeName, newLevel);
-                    localStorage.setItem('stickmanCoins', playerCoins);
                     
+                    // Update UI and persist to the current account
                     coinCountElement.textContent = playerCoins; 
                     updateShopUI(); 
+                    persistUserData();
+
                     if (upgradeName === 'hacker') updateHackerButtonUI(); 
                     if (upgradeName === 'time') updateTimeButtonUI(); 
                 }
@@ -821,7 +925,6 @@
             if (key === 'hacker') hackerLevel = level;
             if (key === 'jump') jumpLevel = level;
             if (key === 'magnet') magnetLevel = level;
-            localStorage.setItem(UPGRADES[key].stateKey, level);
         }
 
         function updateShopUI() {
@@ -838,7 +941,6 @@
                 const buyButton = document.getElementById(`buy-${key}-button`);
                 const reqElement = document.getElementById(`${key}-req`);
 
-                
                 if (!levelElement || !buyButton) return;
 
                 levelElement.textContent = currentLevel;
@@ -887,11 +989,9 @@
             });
         }
 
-
         // =======================================================
         // GAME CONTROL LOOP
         // =======================================================
-        
         function startGame() {
             stopGame(); 
             
@@ -900,8 +1000,8 @@
             score = 0;
             obstacles = [];
             coins = []; 
-            holes = []; // Reset holes
-            isFalling = false; // Reset falling state
+            holes = [];
+            isFalling = false;
             obstacleSpawnTimer = 0;
             obstacleSpawnRate = 120; 
             coinSpawnTimer = 0; 
@@ -932,6 +1032,8 @@
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
+            // Persist progress when stopping game loop
+            persistUserData();
         }
 
         function gameLoop(currentTime) {
@@ -958,7 +1060,6 @@
             const groundY = canvas.height - GROUND_HEIGHT - player.height;
 
             // --- 1. Speed Calculation (Difficulty Curve) ---
-            // Max speed reached at UI Score 800
             const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
             let calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
             
@@ -967,8 +1068,7 @@
                  canvas.style.borderColor = '#e94560'; 
             }
             
-            // --- 2. Cooldown and Effect Management (Time-based) ---
-            
+            // --- 2. Cooldown and Effect Management ---
             if (hackerCooldownRemaining > 0) {
                 hackerCooldownRemaining -= deltaTime;
                 if (hackerCooldownRemaining <= 0) {
@@ -996,25 +1096,15 @@
                 updateTimeButtonUI();
             }
 
-
             // --- 3. Player Movement and Falling Logic ---
-            
             if (!isFalling) {
-                // Apply normal gravity
                 player.velocityY += GRAVITY;
                 player.y += player.velocityY;
 
-                // Check if player is on the ground
                 if (player.y >= groundY) { 
-                    
                     let fallingIntoHole = false;
-                    // Check for overlap with any active hole
                     for (const hole of holes) {
-                        if (
-                            player.x + player.width > hole.x && 
-                            player.x < hole.x + hole.width
-                        ) {
-                            // Player is grounded and above a hole -> Start falling!
+                        if (player.x + player.width > hole.x && player.x < hole.x + hole.width) {
                             fallingIntoHole = true;
                             break;
                         }
@@ -1022,20 +1112,17 @@
 
                     if (fallingIntoHole) {
                         isFalling = true;
-                        player.velocityY = 0; // Start fresh velocity for falling
+                        player.velocityY = 0;
                     } else {
-                        // Normal ground collision
                         player.y = groundY;
                         player.velocityY = 0;
                         jumpCount = 0; 
                     }
                 }
             } else {
-                // FALLING STATE
-                player.velocityY += GRAVITY * 3; // Faster fall speed
+                player.velocityY += GRAVITY * 3;
                 player.y += player.velocityY;
 
-                // Check if fallen past the screen
                 if (player.y > canvas.height + 50) { 
                     gameOver();
                     return;
@@ -1043,23 +1130,19 @@
             }
             
             // --- 4. Game Object and Spawning Updates ---
-            
             score += 1; 
             scoreElement.textContent = uiScore;
             
-            // Obstacle Spawning Rate (Max density reached at UI Score 1000)
+            // Obstacle Spawning Rate
             const initialRate = 120;
             const minRate = 50; 
             const maxScoreForDifficulty = MAX_SCORE_FOR_OBSTACLE_DENSITY; 
-
             const difficultyFactor = Math.min(uiScore / maxScoreForDifficulty, 1);
             const rateReduction = (initialRate - minRate) * difficultyFactor; 
-            
             obstacleSpawnRate = initialRate - rateReduction;
             
             obstacleSpawnTimer++;
             if (obstacleSpawnTimer >= obstacleSpawnRate) {
-                // 15% chance to spawn a hole instead of a regular obstacle
                 if (Math.random() < 0.15) { 
                     holes.push(new Hole());
                 } else {
@@ -1078,9 +1161,7 @@
                 coinSpawnTimer = 0;
             }
 
-
             // --- 5. Magnet, Collision, and Cleanup ---
-            
             if (magnetLevel > 0) {
                 const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
                 coins.forEach(coin => {
@@ -1095,20 +1176,14 @@
                         const isOverheadX = (coin.x + coin.size > player.x) && (coin.x < player.x + player.width);
                         const isHigherY = coin.y < player.y + player.height / 2;
 
-                        if (magnetLevel === 1 && isOverheadX && isHigherY) {
-                            shouldMagnetize = true;
-                        } else if (magnetLevel === 2) {
-                            shouldMagnetize = true;
-                        }
+                        if (magnetLevel === 1 && isOverheadX && isHigherY) shouldMagnetize = true;
+                        else if (magnetLevel === 2) shouldMagnetize = true;
 
                         if (shouldMagnetize) {
                             coin.isMagnetized = true;
-                            
                             const forceMultiplier = (magnetRadius - distance) / magnetRadius; 
-                            
                             const accelX = dx / distance * magnetForce * deltaTime * forceMultiplier;
                             const accelY = dy / distance * magnetForce * deltaTime * forceMultiplier;
-                            
                             coin.magnetSpeedX += accelX;
                             coin.magnetSpeedY += accelY;
                         }
@@ -1118,7 +1193,6 @@
                     }
                 });
             }
-
 
             // Obstacle Update and Collision Check
             for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -1130,9 +1204,7 @@
                     continue;
                 }
                 
-                if (obs.isBypassed) {
-                    continue;
-                }
+                if (obs.isBypassed) continue;
 
                 if (
                     player.x < obs.x + obs.width &&
@@ -1155,7 +1227,6 @@
                 }
             }
 
-
             // Coin Collection Check
             for (let i = coins.length - 1; i >= 0; i--) {
                 const coin = coins[i];
@@ -1176,8 +1247,10 @@
 
                     playerCoins += value;
                     coinCountElement.textContent = playerCoins;
-                    localStorage.setItem('stickmanCoins', playerCoins); 
-                    coins.splice(i, 1); 
+                    coins.splice(i, 1);
+
+                    // Persist coin gain
+                    persistUserData();
                     continue; 
                 }
 
@@ -1191,11 +1264,11 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw ground (The solid part of the ground)
+            // Draw ground
             ctx.fillStyle = '#2d3748';
             ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-            // Draw holes first, so they cover the ground where they are
+            // Draw holes first
             holes.forEach(hole => hole.draw());
             
             // Draw obstacles and coins
@@ -1216,9 +1289,11 @@
             
             if (finalScore > highScore) {
                 highScore = finalScore;
-                localStorage.setItem('stickmanHighScore', highScore);
                 highScoreElement.textContent = highScore;
             }
+
+            // Persist score change
+            persistUserData();
 
             gameOverModal.style.display = 'flex';
         }
@@ -1229,7 +1304,6 @@
             canvas.height = container.clientHeight; 
 
             if (player) {
-                // Recalculate player position to ensure they land on the new ground height
                 const groundY = canvas.height - GROUND_HEIGHT - player.height;
                 if (player.y > groundY && !isFalling) {
                     player.y = groundY;
