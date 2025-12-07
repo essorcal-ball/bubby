@@ -6,7 +6,7 @@
   <title>Arcade Hero</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Inter, system-ui, sans-serif; background-color:#1a1a2e; }
+    body { font-family: Inter, system-ui, sans-serif; background:#1a1a2e; }
     .screen { display:none; height:100vh; width:100vw; box-sizing:border-box; }
     .main-button { transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
     .main-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.45); }
@@ -21,10 +21,10 @@
 </head>
 <body class="text-white">
 
-  <!-- Account Bar -->
+  <!-- Sticky Account Bar -->
   <div class="account-bar flex items-center gap-3">
     <span class="text-yellow-300">Logged in as: <span id="current-username">Guest</span></span>
-    <button onclick="logoutAccount()" class="bg-red-600 px-3 py-1 rounded">Logout</button>
+    <button onclick="logoutAccount()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded main-button">Logout</button>
   </div>
 
   <!-- LOGIN -->
@@ -71,7 +71,6 @@
       <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg main-button">JUMP</button>
       <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg main-button">CROUCH (ArrowDown/S)</button>
 
-      <!-- Active abilities -->
       <button id="hacker-button" onclick="activateHackerAbility()" class="main-button bg-purple-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700" disabled>
         <div id="hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 overlay" style="height:100%;"></div>
         <span id="hacker-cooldown-text" class="relative z-20">BUY IN SHOP</span>
@@ -321,7 +320,8 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const GROUND_HEIGHT = 50;
-  const PLAYER_SIZE = 18; // even smaller stickman
+  const PLAYER_SIZE = 18; // smaller stickman
+  const START_SPAWN_SCORE = 20; // delay spawns to avoid initial lag
 
   let player;
   let obstacles = [];
@@ -351,7 +351,7 @@
   const gameOverModal = document.getElementById('game-over-modal');
   const equippedDisplay = document.getElementById('equipped-skin-display');
 
-  // Buttons (abilities)
+  // Buttons
   const hackerButton = document.getElementById('hacker-button');
   const hackerCooldownOverlay = document.getElementById('hacker-cooldown-overlay');
   const hackerCooldownText = document.getElementById('hacker-cooldown-text');
@@ -382,7 +382,7 @@
   const skinCosts = { santa:5, ninja:10, robot:12, pirate:8, rainbow:15 };
 
   // =========================
-  // Upgrades setup (requirements tweaked)
+  // Upgrades setup
   // =========================
   const TIME_UPGRADE = {
     costs: [12, 20, 35],
@@ -613,7 +613,7 @@
   }
 
   // =========================
-  // Player (even smaller stickman)
+  // Player (smaller stickman)
   // =========================
   class Player {
     constructor() {
@@ -643,14 +643,12 @@
       const onGround = this.y >= canvas.height - GROUND_HEIGHT - this.height - 0.5;
       if (onGround) this.jumpCount = 0;
       if (this.jumpCount < this.maxJumps()) {
-        this.velocityY = -9.5; // adjusted for smaller size
+        this.velocityY = -9.5; // tuned for smaller size
         this.jumpCount++;
       }
     }
     draw() {
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      // color per skin
+      ctx.lineWidth = 3; ctx.lineCap = 'round';
       switch (this.skin) {
         case 'santa': ctx.strokeStyle = '#ff0000'; break;
         case 'ninja': ctx.strokeStyle = '#111111'; break;
@@ -658,7 +656,7 @@
         case 'pirate': ctx.strokeStyle = '#8b5a2b'; break;
         case 'rainbow': {
           const g = ctx.createLinearGradient(this.x, this.y - 16, this.x, this.y + 32);
-          g.addColorStop(0, 'red'); g.addColorStop(0.2, 'orange'); g.addColorStop(0.4, 'yellow'); g.addColorStop(0.6, 'green'); g.addColorStop(0.8, 'blue'); g.addColorStop(1, 'violet');
+          g.addColorStop(0,'red'); g.addColorStop(0.2,'orange'); g.addColorStop(0.4,'yellow'); g.addColorStop(0.6,'green'); g.addColorStop(0.8,'blue'); g.addColorStop(1,'violet');
           ctx.strokeStyle = g; break;
         }
         default: ctx.strokeStyle = '#ffffff';
@@ -685,22 +683,23 @@
 
       // Accessories
       switch (this.skin) {
-        case 'santa': {
+        case 'santa':
           ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 10, headY - 9, 20, 3);
           ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.moveTo(cx - 10, headY - 9); ctx.lineTo(cx + 10, headY - 9); ctx.lineTo(cx, headY - 22); ctx.closePath(); ctx.fill();
           ctx.beginPath(); ctx.arc(cx, headY - 24, 3.5, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
           break;
-        }
-        case 'ninja': { ctx.strokeStyle = '#dc2626'; ctx.beginPath(); ctx.moveTo(cx - 9, headY); ctx.lineTo(cx + 9, headY); ctx.stroke(); break; }
-        case 'robot': {
+        case 'ninja':
+          ctx.strokeStyle = '#dc2626'; ctx.beginPath(); ctx.moveTo(cx - 9, headY); ctx.lineTo(cx + 9, headY); ctx.stroke();
+          break;
+        case 'robot':
           ctx.strokeStyle = '#9aa0a6'; ctx.beginPath(); ctx.moveTo(cx, headY - 7); ctx.lineTo(cx, headY - 12); ctx.stroke();
-          ctx.fillStyle = '#64b5f6'; ctx.beginPath(); ctx.arc(cx, headY - 12, 2.5, 0, Math.PI*2); ctx.fill(); break;
-        }
-        case 'pirate': {
+          ctx.fillStyle = '#64b5f6'; ctx.beginPath(); ctx.arc(cx, headY - 12, 2.5, 0, Math.PI*2); ctx.fill();
+          break;
+        case 'pirate':
           ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx - 3, headY, 2.3, 0, Math.PI*2); ctx.fill();
           ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(cx - 3, headY + 2); ctx.lineTo(cx, headY + 5); ctx.stroke();
-          ctx.strokeStyle = '#b91c1c'; ctx.beginPath(); ctx.moveTo(cx - 10, headY - 4); ctx.lineTo(cx + 10, headY - 4); ctx.stroke(); break;
-        }
+          ctx.strokeStyle = '#b91c1c'; ctx.beginPath(); ctx.moveTo(cx - 10, headY - 4); ctx.lineTo(cx + 10, headY - 4); ctx.stroke();
+          break;
       }
     }
   }
@@ -729,7 +728,7 @@
     }
     update() {
       this.x -= currentSpeed;
-      if (this.type === 'air' && Math.floor(score/10) >= 250) this.y += this.vy; // swoop
+      if (this.type === 'air' && Math.floor(score/10) >= 250) this.y += this.vy;
     }
     draw() {
       ctx.fillStyle = this.color;
@@ -767,7 +766,7 @@
       this.height = GROUND_HEIGHT;
       this.isTriggered = false;
       this.animationProgress = 0;
-      this.baseColor = '#2f2b2d'; // near ground, slight red tint
+      this.baseColor = '#2f2b2d';
     }
     update() {
       this.x -= currentSpeed;
@@ -867,7 +866,9 @@
     player.setSkin(equippedSkin);
     gameOverModal.style.display = 'none';
     canvas.style.borderColor = '#e94560';
-    lastTime = 0;
+
+    // Lag fix: initialize lastTime to current time
+    lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
   }
   function stopGame() {
@@ -876,7 +877,6 @@
   }
 
   function gameLoop(currentTime) {
-    if (!lastTime) lastTime = currentTime;
     const deltaTime = Math.min(currentTime - lastTime, 100);
     lastTime = currentTime;
     if (isGameOver) { stopGame(); return; }
@@ -925,23 +925,24 @@
     const difficultyFactor = Math.min(uiScore / 300, 1);
     obstacleSpawnRate = initialRate - (initialRate - minObstacleRate) * difficultyFactor;
 
-    // Spawns
-    obstacleSpawnTimer++;
-    if (obstacleSpawnTimer >= obstacleSpawnRate) {
-      if (Math.random() < 0.15) holes.push(new Hole());
-      else {
-        const type = Math.random() < 0.7 ? 'ground' : 'air';
-        obstacles.push(new Obstacle(type));
+    // Spawns (lag fix: start after score threshold)
+    if (uiScore > START_SPAWN_SCORE) {
+      obstacleSpawnTimer++;
+      if (obstacleSpawnTimer >= obstacleSpawnRate) {
+        if (Math.random() < 0.15) holes.push(new Hole());
+        else obstacles.push(new Obstacle(Math.random() < 0.7 ? 'ground' : 'air'));
+        obstacleSpawnTimer = 0;
       }
-      obstacleSpawnTimer = 0;
-    }
-    if (uiScore >= 200 && Math.random() < 0.02) traps.push(new Trap());
 
-    coinSpawnTimer++;
-    if (coinSpawnTimer >= COIN_SPAWN_RATE) {
-      if (Math.random() < 0.6) coins.push(new Coin());
-      coinSpawnTimer = 0;
+      coinSpawnTimer++;
+      if (coinSpawnTimer >= COIN_SPAWN_RATE) {
+        if (Math.random() < 0.6) coins.push(new Coin());
+        coinSpawnTimer = 0;
+      }
     }
+
+    // Traps start later
+    if (uiScore >= 200 && Math.random() < 0.02) traps.push(new Trap());
 
     // Magnet attraction
     if (magnetLevel > 0) {
@@ -1049,7 +1050,7 @@
   // Input init
   handleInput();
 
-  // Shop previews
+  // Shop previews (rendered once per shop visit)
   function renderPreviews() {
     drawPreview('preview-default', 'default');
     drawPreview('preview-santa', 'santa');
@@ -1090,7 +1091,7 @@
     pctx.beginPath(); pctx.moveTo(cx, y+18); pctx.lineTo(x, y+h);
     pctx.moveTo(cx, y+18); pctx.lineTo(x+w, y+h); pctx.stroke();
 
-    // Accessories (santa/ninja/robot/pirate) kept consistent
+    // Accessories
     if (skin === 'santa') {
       pctx.fillStyle = '#fff'; pctx.fillRect(cx-11, y-16, 22, 3);
       pctx.fillStyle = '#ff0000'; pctx.beginPath(); pctx.moveTo(cx-11, y-16); pctx.lineTo(cx+11, y-16); pctx.lineTo(cx, y-28); pctx.closePath(); pctx.fill();
