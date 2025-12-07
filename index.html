@@ -8,65 +8,52 @@
   <style>
     body { font-family: Inter, system-ui, sans-serif; background:#1a1a2e; }
     .screen { display:none; height:100vh; width:100vw; box-sizing:border-box; }
+    #gameCanvas { background:#4a5568; border:4px solid #e94560; border-radius:12px; }
+    .account-bar { position:fixed; top:0; right:0; background:#16213e; padding:8px 12px; border-bottom-left-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.4); z-index:50; }
+    .shop-card { background:#16213e; border-radius:12px; padding:1rem; margin-bottom:1rem; }
+    .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; width:100%; max-width:1100px; }
+    .overlay { transition: height 0.1s linear; }
+    .badge { background:#203463; border-radius:999px; padding:4px 10px; font-size:12px; }
     .main-button { transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
     .main-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.45); }
-    #gameCanvas { background:#4a5568; border:4px solid #e94560; border-radius:12px; touch-action: manipulation; }
-    .game-status-box { background-color:#16213e; border-radius:10px; padding:12px 20px; }
-    .shop-card { background:#16213e; border-radius:12px; padding:1rem; }
-    .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; width:100%; max-width:1100px; }
-    .account-bar { position:fixed; top:0; right:0; background:#16213e; padding:8px 12px; border-bottom-left-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.4); z-index:50; }
-    .badge { background:#203463; border-radius:999px; padding:4px 10px; font-size:12px; }
-    .overlay { transition: height 0.1s linear; }
   </style>
 </head>
 <body class="text-white">
 
-  <!-- Sticky Account Bar -->
+  <!-- Account Bar -->
   <div class="account-bar flex items-center gap-3">
     <span class="text-yellow-300">Logged in as: <span id="current-username">Guest</span></span>
-    <button onclick="logoutAccount()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded main-button">Logout</button>
+    <button onclick="logoutAccount()" class="bg-red-600 px-3 py-1 rounded">Logout</button>
   </div>
 
   <!-- LOGIN -->
   <div id="login-screen" class="screen flex flex-col items-center justify-center p-6">
-    <h1 class="text-5xl font-extrabold text-[#e94560] mb-8">Welcome to Arcade Hero</h1>
+    <h1 class="text-5xl font-bold text-[#e94560] mb-8">Welcome to Arcade Hero</h1>
     <div class="w-full max-w-sm space-y-4">
-      <input id="username-input" type="text" placeholder="Enter Username" class="w-full p-3 rounded-lg text-black"/>
-      <div class="relative">
-        <input id="password-input" type="password" placeholder="Enter Password" class="w-full p-3 rounded-lg text-black pr-16"/>
-        <button type="button" onclick="togglePassword('password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-      </div>
-      <div class="relative">
-        <input id="confirm-password-input" type="password" placeholder="Confirm Password" class="w-full p-3 rounded-lg text-black pr-16"/>
-        <button type="button" onclick="togglePassword('confirm-password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-      </div>
-      <div class="flex gap-3">
-        <button onclick="createAccount()" class="main-button bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex-1">Create Account</button>
-        <button onclick="loginAccount()" class="main-button bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex-1">Login</button>
-      </div>
+      <input id="username-input" type="text" placeholder="Username" class="w-full p-3 rounded text-black"/>
+      <input id="password-input" type="password" placeholder="Password" class="w-full p-3 rounded text-black"/>
+      <input id="confirm-password-input" type="password" placeholder="Confirm Password" class="w-full p-3 rounded text-black"/>
+      <button onclick="createAccount()" class="bg-green-600 text-white font-bold py-2 px-4 rounded w-full">Create Account</button>
+      <button onclick="loginAccount()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded w-full">Login</button>
     </div>
   </div>
 
   <!-- MENU -->
   <div id="menu-screen" class="screen flex flex-col items-center justify-center p-6">
-    <h1 class="text-6xl md:text-7xl font-extrabold text-[#e94560] mb-10 tracking-widest">ARCADE HERO</h1>
-    <div class="flex flex-col gap-4 w-full max-w-sm">
-      <button onclick="goToScreen('game')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl">PLAY GAME</button>
-      <button onclick="goToScreen('shop')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl">SHOP</button>
-    </div>
+    <h1 class="text-6xl font-bold text-[#e94560] mb-10">ARCADE HERO</h1>
+    <button onclick="goToScreen('game')" class="bg-[#16213e] text-3xl font-bold py-4 rounded-xl mb-4">PLAY GAME</button>
+    <button onclick="goToScreen('shop')" class="bg-[#16213e] text-3xl font-bold py-4 rounded-xl">SHOP</button>
   </div>
 
   <!-- GAME -->
   <div id="game-screen" class="screen flex flex-col items-center justify-start py-8 px-4">
-    <div id="game-info" class="game-status-box flex justify-between items-center w-full max-w-4xl mb-4">
-      <span class="text-lg">Score: <span id="current-score" class="font-bold">0</span></span>
-      <span class="text-lg">High Score: <span id="high-score" class="font-bold">0</span></span>
-      <span class="text-lg">💰 Coins: <span id="coin-count" class="font-bold">0</span></span>
-      <span class="text-xs badge">Equipped: <span id="equipped-skin-display">default</span></span>
+    <div class="flex justify-between w-full max-w-4xl mb-4">
+      <span>Score: <span id="current-score">0</span></span>
+      <span>High Score: <span id="high-score">0</span></span>
+      <span>💰 Coins: <span id="coin-count">0</span></span>
+      <span>Equipped: <span id="equipped-skin-display">default</span></span>
     </div>
-
     <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
-
     <div class="mt-6 flex flex-wrap justify-center gap-4">
       <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg main-button">JUMP</button>
       <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg main-button">CROUCH (ArrowDown/S)</button>
@@ -309,7 +296,7 @@
     Object.values(screens).forEach(s => s.style.display = 'none');
     screens[target].style.display = 'flex';
     currentScreen = target;
-    if (target === 'game') { resizeCanvas(); startGame(); }
+    if (target === 'game') { resizeCanvas(); startGame(); } // auto-start the game
     if (target === 'shop') { updateShopUI(); renderPreviews(); }
   }
   window.onload = () => { goToScreen('login'); updateUserStatus(); renderPreviews(); };
@@ -320,7 +307,7 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const GROUND_HEIGHT = 50;
-  const PLAYER_SIZE = 18; // smaller stickman
+  const PLAYER_SIZE = 18; // small stickman
   const START_SPAWN_SCORE = 20; // delay spawns to avoid initial lag
 
   let player;
@@ -452,19 +439,8 @@
     if (name === 'hacker') updateHackerButtonUI();
     if (name === 'time') updateTimeButtonUI();
   }
-  function getUpgradeLevel(name) {
-    if (name === 'time') return timeLevel;
-    if (name === 'hacker') return hackerLevel;
-    if (name === 'jump') return jumpLevel;
-    if (name === 'magnet') return magnetLevel;
-    return 0;
-  }
-  function setUpgradeLevel(name, lvl) {
-    if (name === 'time') timeLevel = lvl;
-    if (name === 'hacker') hackerLevel = lvl;
-    if (name === 'jump') jumpLevel = lvl;
-    if (name === 'magnet') magnetLevel = lvl;
-  }
+  function getUpgradeLevel(name) { return { time:timeLevel, hacker:hackerLevel, jump:jumpLevel, magnet:magnetLevel }[name] ?? 0; }
+  function setUpgradeLevel(name, lvl) { if (name==='time') timeLevel=lvl; if(name==='hacker') hackerLevel=lvl; if(name==='jump') jumpLevel=lvl; if(name==='magnet') magnetLevel=lvl; }
 
   function updateShopUI() {
     // Upgrades UI
@@ -505,9 +481,7 @@
     equippedDisplay.textContent = equippedSkin;
   }
 
-  // =========================
   // Skins buy/equip
-  // =========================
   function buySkin(name) {
     if (name !== 'default' && ownedSkins[name]) return alert('Already owned.');
     const cost = skinCosts[name] || 0;
@@ -535,15 +509,9 @@
     isHackerAbilityReady = false;
     hackerCooldownRemaining = HACKER_UPGRADE.cooldowns[hackerLevel-1];
 
-    let bypassCount = 1;
-    if (hackerLevel === 2) bypassCount = 2;
-    if (hackerLevel === 3) bypassCount = 3;
-
+    let bypassCount = hackerLevel === 1 ? 1 : (hackerLevel === 2 ? 2 : 3);
     let targets = obstacles.filter(obs => obs.x > player.x && !obs.isBypassed);
-    if (hackerLevel === 3) {
-      const holeTargets = holes.filter(h => h.x > player.x);
-      targets = targets.concat(holeTargets);
-    }
+    if (hackerLevel === 3) targets = targets.concat(holes.filter(h => h.x > player.x));
 
     for (let i = 0; i < bypassCount && i < targets.length; i++) {
       const t = targets[i];
@@ -552,7 +520,6 @@
     }
     updateHackerButtonUI();
   }
-
   function activateTimeAbility() {
     if (timeLevel === 0 || !isTimeAbilityReady || isGameOver) return;
     isTimeAbilityReady = false;
@@ -563,7 +530,6 @@
     canvas.style.borderColor = '#60a5fa';
     updateTimeButtonUI();
   }
-
   function updateHackerButtonUI() {
     if (hackerLevel === 0) {
       hackerButton.disabled = true;
@@ -584,7 +550,6 @@
       hackerCooldownOverlay.style.height = `${percent}%`;
     }
   }
-
   function updateTimeButtonUI() {
     if (timeLevel === 0) {
       timeButton.disabled = true;
@@ -613,7 +578,7 @@
   }
 
   // =========================
-  // Player (smaller stickman)
+  // Player (small, animated running/jumping)
   // =========================
   class Player {
     constructor() {
@@ -632,23 +597,20 @@
       this.height = on ? PLAYER_SIZE/2 : PLAYER_SIZE;
       this.y = canvas.height - GROUND_HEIGHT - this.height;
     }
-    maxJumps() {
-      if (jumpLevel === 0) return 1;
-      if (jumpLevel === 1) return 2;
-      if (jumpLevel === 2) return 3;
-      return 1;
-    }
+    maxJumps() { return jumpLevel === 0 ? 1 : (jumpLevel === 1 ? 2 : 3); }
     jump() {
       if (isGameOver || this.isCrouching) return;
       const onGround = this.y >= canvas.height - GROUND_HEIGHT - this.height - 0.5;
       if (onGround) this.jumpCount = 0;
       if (this.jumpCount < this.maxJumps()) {
-        this.velocityY = -9.5; // tuned for smaller size
+        this.velocityY = -9.5; // tuned for small size
         this.jumpCount++;
       }
     }
     draw() {
       ctx.lineWidth = 3; ctx.lineCap = 'round';
+
+      // Skin color
       switch (this.skin) {
         case 'santa': ctx.strokeStyle = '#ff0000'; break;
         case 'ninja': ctx.strokeStyle = '#111111'; break;
@@ -661,44 +623,67 @@
         }
         default: ctx.strokeStyle = '#ffffff';
       }
+
       const cx = this.x + this.width/2;
       const headY = this.y - 7;
       const bodyTop = this.y;
       const bodyBottom = this.isCrouching ? this.y + 14 : this.y + 18;
 
-      // Head
+      // Determine pose
+      const onGround = this.y >= canvas.height - GROUND_HEIGHT - this.height - 0.5;
+      const runPhase = Math.floor((performance.now()/120)) % 2; // simple alternating cadence
+
+      // Head (small, smiling)
       ctx.beginPath(); ctx.arc(cx, headY, 7, 0, Math.PI*2); ctx.stroke();
+      // Smile
+      ctx.beginPath(); ctx.arc(cx, headY+2, 3, 0, Math.PI, false); ctx.stroke();
+
       // Body
       ctx.beginPath(); ctx.moveTo(cx, bodyTop); ctx.lineTo(cx, bodyBottom); ctx.stroke();
-      // Arms
+
+      // Arms: swing while running, up while jumping
       ctx.beginPath();
-      ctx.moveTo(cx, this.y + (this.isCrouching ? 7 : 5)); ctx.lineTo(this.x - 8, this.y + (this.isCrouching ? 10 : 9));
-      ctx.moveTo(cx, this.y + (this.isCrouching ? 7 : 5)); ctx.lineTo(this.x + this.width + 8, this.y + (this.isCrouching ? 10 : 9));
-      ctx.stroke();
-      // Legs
-      ctx.beginPath();
-      ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x - 6, this.y + this.height);
-      ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x + this.width + 6, this.y + this.height);
+      if (onGround) {
+        if (runPhase === 0) {
+          ctx.moveTo(cx, this.y + 6); ctx.lineTo(this.x - 8, this.y + 10); // left back
+          ctx.moveTo(cx, this.y + 6); ctx.lineTo(this.x + this.width + 10, this.y + 8); // right forward
+        } else {
+          ctx.moveTo(cx, this.y + 6); ctx.lineTo(this.x - 10, this.y + 8); // left forward
+          ctx.moveTo(cx, this.y + 6); ctx.lineTo(this.x + this.width + 8, this.y + 10); // right back
+        }
+      } else {
+        // jump: arms up
+        ctx.moveTo(cx, this.y + 4); ctx.lineTo(this.x - 8, this.y - 4);
+        ctx.moveTo(cx, this.y + 4); ctx.lineTo(this.x + this.width + 8, this.y - 4);
+      }
       ctx.stroke();
 
-      // Accessories
+      // Legs: alternating run vs compact jump tuck
+      ctx.beginPath();
+      if (onGround) {
+        if (runPhase === 0) {
+          ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x - 6, this.y + this.height);       // left extended
+          ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x + this.width + 6, this.y + this.height - 4); // right pushing
+        } else {
+          ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x - 6, this.y + this.height - 4);   // left pushing
+          ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x + this.width + 6, this.y + this.height);     // right extended
+        }
+      } else {
+        // jump pose: both legs angled upward
+        ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x - 4, this.y + this.height - 8);
+        ctx.moveTo(cx, bodyBottom); ctx.lineTo(this.x + this.width + 4, this.y + this.height - 8);
+      }
+      ctx.stroke();
+
+      // Accessories (simplified to fit small size)
       switch (this.skin) {
         case 'santa':
           ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 10, headY - 9, 20, 3);
           ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.moveTo(cx - 10, headY - 9); ctx.lineTo(cx + 10, headY - 9); ctx.lineTo(cx, headY - 22); ctx.closePath(); ctx.fill();
-          ctx.beginPath(); ctx.arc(cx, headY - 24, 3.5, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
-          break;
-        case 'ninja':
-          ctx.strokeStyle = '#dc2626'; ctx.beginPath(); ctx.moveTo(cx - 9, headY); ctx.lineTo(cx + 9, headY); ctx.stroke();
           break;
         case 'robot':
           ctx.strokeStyle = '#9aa0a6'; ctx.beginPath(); ctx.moveTo(cx, headY - 7); ctx.lineTo(cx, headY - 12); ctx.stroke();
           ctx.fillStyle = '#64b5f6'; ctx.beginPath(); ctx.arc(cx, headY - 12, 2.5, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'pirate':
-          ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx - 3, headY, 2.3, 0, Math.PI*2); ctx.fill();
-          ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(cx - 3, headY + 2); ctx.lineTo(cx, headY + 5); ctx.stroke();
-          ctx.strokeStyle = '#b91c1c'; ctx.beginPath(); ctx.moveTo(cx - 10, headY - 4); ctx.lineTo(cx + 10, headY - 4); ctx.stroke();
           break;
       }
     }
@@ -775,7 +760,6 @@
     draw() {
       ctx.fillStyle = this.baseColor;
       ctx.fillRect(this.x, this.y, this.width, this.height);
-
       if (this.isTriggered) {
         const jawLen = 22, jawWidth = 6;
         const baseX = this.x + this.width/2, baseY = this.y;
@@ -981,16 +965,11 @@
     for (const hole of holes) {
       const touchingGround = player.y + player.height >= canvas.height - GROUND_HEIGHT;
       const overX = (player.x + player.width) > hole.x && player.x < (hole.x + hole.width);
-      if (touchingGround && overX) {
-        return gameOver();
-      }
+      if (touchingGround && overX) { return gameOver(); }
     }
     for (const trap of traps) {
       const overlap = rectsOverlap(player.x, player.y, player.width, player.height, trap.x, trap.y, trap.width, trap.height);
-      if (!trap.isTriggered && overlap) {
-        trap.isTriggered = true;
-        return gameOver();
-      }
+      if (!trap.isTriggered && overlap) { trap.isTriggered = true; return gameOver(); }
     }
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i];
@@ -1050,7 +1029,7 @@
   // Input init
   handleInput();
 
-  // Shop previews (rendered once per shop visit)
+  // Shop previews
   function renderPreviews() {
     drawPreview('preview-default', 'default');
     drawPreview('preview-santa', 'santa');
@@ -1059,47 +1038,33 @@
     drawPreview('preview-pirate', 'pirate');
     drawPreview('preview-rainbow', 'rainbow');
   }
-  function drawPreview(id, skin) {
-    const c = document.getElementById(id);
-    if (!c) return;
-    const pctx = c.getContext('2d');
-    pctx.clearRect(0,0,c.width,c.height);
-    const x = 30, y = 60, w = 18, h = 24;
-    const cx = x + w/2;
-
-    switch (skin) {
-      case 'santa': pctx.strokeStyle = '#ff0000'; break;
-      case 'ninja': pctx.strokeStyle = '#111111'; break;
-      case 'robot': pctx.strokeStyle = '#9aa0a6'; break;
-      case 'pirate': pctx.strokeStyle = '#8b5a2b'; break;
-      case 'rainbow': {
-        const g = pctx.createLinearGradient(x, y-20, x, y+40);
-        g.addColorStop(0,'red'); g.addColorStop(0.25,'orange'); g.addColorStop(0.5,'yellow'); g.addColorStop(0.75,'green'); g.addColorStop(1,'blue');
-        pctx.strokeStyle = g; break;
-      }
-      default: pctx.strokeStyle = '#ffffff';
+  function drawPreview(id,skin){
+    const c=document.getElementById(id); if(!c) return;
+    const p=c.getContext('2d');
+    p.clearRect(0,0,c.width,c.height);
+    const x=30,y=60,w=18,h=24; const cx=x+w/2;
+    p.lineWidth=3;
+    switch(skin){
+      case 'santa': p.strokeStyle='#ff0000'; break;
+      case 'ninja': p.strokeStyle='#111111'; break;
+      case 'robot': p.strokeStyle='#9aa0a6'; break;
+      case 'pirate': p.strokeStyle='#8b5a2b'; break;
+      case 'rainbow': { const g=p.createLinearGradient(x,y-20,x,y+40); g.addColorStop(0,'red'); g.addColorStop(0.25,'orange'); g.addColorStop(0.5,'yellow'); g.addColorStop(0.75,'green'); g.addColorStop(1,'blue'); p.strokeStyle=g; break; }
+      default: p.strokeStyle='#ffffff';
     }
-    pctx.lineWidth = 3;
     // Head
-    pctx.beginPath(); pctx.arc(cx, y-9, 7, 0, Math.PI*2); pctx.stroke();
+    p.beginPath(); p.arc(cx,y-9,7,0,Math.PI*2); p.stroke();
     // Body
-    pctx.beginPath(); pctx.moveTo(cx, y); pctx.lineTo(cx, y+18); pctx.stroke();
+    p.beginPath(); p.moveTo(cx,y); p.lineTo(cx,y+18); p.stroke();
     // Arms
-    pctx.beginPath(); pctx.moveTo(cx, y+5); pctx.lineTo(x-7, y+9);
-    pctx.moveTo(cx, y+5); pctx.lineTo(x+w+7, y+9); pctx.stroke();
+    p.beginPath(); p.moveTo(cx,y+5); p.lineTo(x-7,y+9);
+    p.moveTo(cx,y+5); p.lineTo(x+w+7,y+9); p.stroke();
     // Legs
-    pctx.beginPath(); pctx.moveTo(cx, y+18); pctx.lineTo(x, y+h);
-    pctx.moveTo(cx, y+18); pctx.lineTo(x+w, y+h); pctx.stroke();
+    p.beginPath(); p.moveTo(cx,y+18); p.lineTo(x,y+h);
+    p.moveTo(cx,y+18); p.lineTo(x+w,y+h); p.stroke();
 
-    // Accessories
-    if (skin === 'santa') {
-      pctx.fillStyle = '#fff'; pctx.fillRect(cx-11, y-16, 22, 3);
-      pctx.fillStyle = '#ff0000'; pctx.beginPath(); pctx.moveTo(cx-11, y-16); pctx.lineTo(cx+11, y-16); pctx.lineTo(cx, y-28); pctx.closePath(); pctx.fill();
-      pctx.beginPath(); pctx.arc(cx, y-30, 3, 0, Math.PI*2); pctx.fillStyle = '#fff'; pctx.fill();
-    }
-    if (skin === 'ninja') { pctx.strokeStyle = '#dc2626'; pctx.beginPath(); pctx.moveTo(cx-10, y-6); pctx.lineTo(cx+10, y-6); pctx.stroke(); }
-    if (skin === 'robot') { pctx.strokeStyle = '#9aa0a6'; pctx.beginPath(); pctx.moveTo(cx, y-14); pctx.lineTo(cx, y-20); pctx.stroke(); pctx.fillStyle = '#64b5f6'; pctx.beginPath(); pctx.arc(cx, y-20, 3, 0, Math.PI*2); pctx.fill(); }
-    if (skin === 'pirate') { pctx.fillStyle = '#000'; pctx.beginPath(); pctx.arc(cx-3, y-10, 2.5, 0, Math.PI*2); pctx.fill(); pctx.strokeStyle = '#000'; pctx.beginPath(); pctx.moveTo(cx-3, y-8); pctx.lineTo(cx, y-2); pctx.stroke(); }
+    if(skin==='santa'){ p.fillStyle='#fff'; p.fillRect(cx-11,y-16,22,3); p.fillStyle='#ff0000'; p.beginPath(); p.moveTo(cx-11,y-16); p.lineTo(cx+11,y-16); p.lineTo(cx,y-28); p.closePath(); p.fill(); }
+    if(skin==='robot'){ p.strokeStyle='#9aa0a6'; p.beginPath(); p.moveTo(cx,y-14); p.lineTo(cx,y-20); p.stroke(); p.fillStyle='#64b5f6'; p.beginPath(); p.arc(cx,y-20,3,0,Math.PI*2); p.fill(); }
   }
 </script>
 </body>
