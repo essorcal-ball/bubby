@@ -348,9 +348,11 @@
     const GRAVITY = 0.6;
     const JUMP_VELOCITY = -12;
 
+    // Faster speed scaling
     const BASE_GAME_SPEED = 4.0;
-    const MAX_GAME_SPEED_INCREASE = 6.0;
-    const MAX_SCORE_FOR_SPEED = 400;
+    const MAX_GAME_SPEED_INCREASE = 8.0;   // higher ceiling
+    const MAX_SCORE_FOR_SPEED = 250;       // reaches max speed sooner
+
     const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300;
     let obstacleSpawnRate = 100;
     const MIN_OBSTACLE_RATE = 20;
@@ -393,13 +395,15 @@
     let equippedSkin = 'default';
     let ownedSkins = { default: true, santa: false };
 
+    // Trap spawn rarity settings (fixed)
+    const TRAP_SPAWN_PROBABILITY = 0.015; // rare and fixed
     // =======================================================
-    // UPGRADES SETUP
+    // UPGRADES SETUP (UPDATED REQUIREMENTS)
     // =======================================================
     const TIME_UPGRADE = {
       costs: [12, 20, 35],
       cooldowns: [30000, 20000, 35000],
-      highScoreRequirement: [400, 300, 0],
+      highScoreRequirement: [200, 300, 0], // updated level 1 requirement
       effectDuration: [4000, 5000, 6000],
       slowdownFactor: [0.7, 0.5, 'BASE'],
       maxLevel: 3,
@@ -415,7 +419,7 @@
     const HACKER_UPGRADE = {
       costs: [10, 25, 40],
       cooldowns: [9000, 13000, 16000],
-      highScoreRequirement: [400, 550, 800],
+      highScoreRequirement: [200, 550, 800], // updated level 1 requirement
       maxLevel: 3,
       effect: (level) => {
         if (level === 0) return 'Not yet purchased.';
@@ -596,9 +600,15 @@
       }
     }
 
+    // Hole widened over time
     class Hole {
       constructor() {
-        this.width = 75 + Math.random() * 75;
+        const baseWidth = 75;
+        const randomExtra = Math.random() * 75;
+        // scale with score; score is ~10x uiScore; use uiScore equivalently:
+        const uiScore = Math.floor(score / 10);
+        const scaling = Math.min(uiScore / 200, 3); // caps at 3
+        this.width = (baseWidth + randomExtra) * (1 + scaling * 0.3);
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
@@ -619,6 +629,7 @@
       }
     }
 
+    // Bear trap that blends into ground and snaps shut
     class Trap {
       constructor() {
         this.width = 75 + Math.random() * 75;
@@ -626,19 +637,28 @@
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        this.color = '#2b0000'; // much darker red
+        // Almost ground color with faint red tint to be overlooked
+        this.baseColor = '#2d3748'; // ground color used in draw()
+        this.color = '#2d3748';
+        this.tintAlpha = 0.08; // subtle red tint
         this.animationProgress = 0; // 0 → 1 for closing jaws
       }
       update() {
         this.x -= currentSpeed;
         if (this.isTriggered && this.animationProgress < 1) {
-          this.animationProgress += 0.05;
+          this.animationProgress += 0.06;
         }
       }
       draw() {
-        // Base trap area
+        // Base area (blend into ground)
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        // subtle tint overlay to trick the eye
+        if (!this.isTriggered) {
+          ctx.fillStyle = `rgba(255,0,0,${this.tintAlpha})`;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
 
         // Bear-trap sticks (two rows closing)
         const stickHeight = 20;
@@ -655,7 +675,7 @@
           ctx.save();
           ctx.translate(baseX, topRowY);
           if (this.isTriggered) ctx.rotate(-Math.PI / 4 * this.animationProgress);
-          ctx.fillStyle = '#a10000';
+          ctx.fillStyle = '#2b2f3a'; // near-ground shade
           ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
           ctx.restore();
 
@@ -663,7 +683,7 @@
           ctx.save();
           ctx.translate(baseX + spacing/2, bottomRowY);
           if (this.isTriggered) ctx.rotate(Math.PI / 4 * this.animationProgress);
-          ctx.fillStyle = '#a10000';
+          ctx.fillStyle = '#2b2f3a';
           ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
           ctx.restore();
         }
@@ -975,7 +995,7 @@
 
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
 
-      // Speed ramp
+      // Speed ramp (faster to max)
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
@@ -1034,8 +1054,8 @@
         obstacleSpawnTimer = 0;
       }
 
-      // Traps spawn independently after 200 points
-      if (Math.floor(score / 10) >= 200 && Math.random() < 0.02) {
+      // Traps: rare, start at score >= 250 (uiScore)
+      if (uiScore >= 250 && Math.random() < TRAP_SPAWN_PROBABILITY) {
         traps.push(new Trap());
       }
 
@@ -1098,16 +1118,18 @@
         if (hole.x + hole.width < 0) holes.splice(i, 1);
       }
 
-      // Traps
+      // Traps — snap shut on contact
       for (let i = traps.length - 1; i >= 0; i--) {
         const trap = traps[i];
         trap.update();
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
+
         if (!trap.isTriggered &&
             player.x + player.width > trap.x &&
             player.x < trap.x + trap.width &&
             player.y + player.height >= trap.y) {
           trap.isTriggered = true;
+          // immediate game over on snap
           gameOver(); return;
         }
       }
@@ -1180,3 +1202,4 @@
     });
   </script>
 </body>
+</html>
