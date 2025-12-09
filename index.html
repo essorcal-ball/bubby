@@ -15,6 +15,9 @@
     .game-status-box { background-color: #16213e; border-radius: 8px; padding: 12px 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
     .shop-card { background-color: #16213e; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s; }
     .shop-card:hover { transform: translateY(-2px); border-color: #e94560; }
+    .table-header { background-color: #1f2a44; }
+    .table-row { background-color: #203463; }
+    .table-row:nth-child(odd) { background-color: #1b2c4a; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
@@ -53,6 +56,7 @@
       <div class="flex flex-col space-y-6 w-full max-w-sm">
         <button onclick="goToScreen('game')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">PLAY GAME</button>
         <button onclick="goToScreen('shop')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">SHOP</button>
+        <button onclick="goToScreen('leaderboard')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">LEADERBOARD</button>
       </div>
     </div>
 
@@ -78,6 +82,11 @@
         <button id="time-button" onclick="activateTimeAbility()" class="main-button bg-blue-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
           <div id="time-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
           <span id="time-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY TIME</span>
+        </button>
+
+        <button id="golden-hacker-button" onclick="activateGoldenHacker()" class="main-button bg-yellow-500 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
+          <div id="golden-hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
+          <span id="golden-hacker-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY GOLDEN SKIN</span>
         </button>
 
         <button onclick="startGame()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">Restart Game</button>
@@ -170,24 +179,28 @@
         <!-- Skins -->
         <div class="shop-card p-6 border-2 border-[#1c305c]">
           <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Christmas Santa Skin</p>
-            <p class="text-lg text-gray-300 mb-2">Dress up as Santa!</p>
-            <p class="text-lg">Owned: <span id="santa-owned" class="font-bold text-green-400">No</span></p>
-            <p class="text-lg">Equipped: <span id="equipped-skin" class="font-bold text-green-400">default</span></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="santa-cost" class="text-xl font-bold text-yellow-400">Cost: 50 Coins</p>
-            <div class="flex gap-2">
-              <button id="buy-santa-button" onclick="buySkin('santa')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">Buy</button>
-              <button id="equip-santa-button" onclick="equipSkin('santa')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Equip</button>
-            </div>
-          </div>
+          <div id="skins-list" class="space-y-4"></div>
         </div>
-
       </div>
 
       <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">← Back to Menu</button>
+    </div>
+
+    <!-- LEADERBOARD SCREEN -->
+    <div id="leaderboard-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
+      <h2 class="text-5xl font-bold text-[#e94560] mb-8">Leaderboard</h2>
+      <p class="text-lg mb-6 text-center max-w-lg">Most levels reached (best score milestones) across all users.</p>
+      <table class="w-full max-w-2xl text-left border-collapse">
+        <thead class="table-header">
+          <tr>
+            <th class="p-3">Rank</th>
+            <th class="p-3">Player</th>
+            <th class="p-3">Best Level</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body" class="text-white"></tbody>
+      </table>
+      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg mt-8">← Back to Menu</button>
     </div>
   </div>
 
@@ -221,7 +234,15 @@
       if (!username || !password || !confirmPassword) { alert("Please fill in all fields."); return; }
       if (password !== confirmPassword) { alert("Passwords do not match."); return; }
       if (getUserData(username)) { alert("Account already exists. Please login."); return; }
-      const newUser = { password, coins:0, highScore:0, upgrades:{time:0,hacker:0,jump:0,magnet:0}, skins:{owned:['default'], equipped:'default'} };
+      const newUser = {
+        password,
+        coins: 0,
+        highScore: 0,
+        bestLevel: 0,
+        upgrades: { time:0, hacker:0, jump:0, magnet:0 },
+        skins: { owned:['default'], equipped:'default' },
+        goldenHackerUnlocked: false
+      };
       saveUserData(username, newUser);
       alert("Account created! Please login.");
     }
@@ -245,12 +266,14 @@
       // Reset in-memory state
       playerCoins = 0;
       highScore = 0;
+      bestLevel = 0;
       timeLevel = 0;
       hackerLevel = 0;
       jumpLevel = 0;
       magnetLevel = 0;
-      ownedSkins = { default: true, santa: false };
+      ownedSkins = { default: true, santa: false, ninja: false, robot: false, pirate: false, alien: false, golden: false };
       equippedSkin = 'default';
+      goldenHackerUnlocked = false;
 
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
@@ -259,17 +282,18 @@
     }
     function loadUserData(userData) {
       playerCoins = userData.coins;
-      highScore = userData.highScore;
+      highScore = userData.highScore || 0;
+      bestLevel = userData.bestLevel || 0;
       timeLevel = userData.upgrades.time;
       hackerLevel = userData.upgrades.hacker;
       jumpLevel = userData.upgrades.jump;
       magnetLevel = userData.upgrades.magnet;
 
       // Skins
-      ownedSkins = { default: true, santa: userData.skins.owned.includes('santa') };
-      equippedSkin = userData.skins.equipped || 'default';
-      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
-      document.getElementById('equipped-skin').textContent = equippedSkin;
+      ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
+      (userData.skins?.owned || []).forEach(id => { ownedSkins[id] = true; });
+      equippedSkin = userData.skins?.equipped || 'default';
+      goldenHackerUnlocked = !!userData.goldenHackerUnlocked || ownedSkins.golden;
 
       highScoreElement.textContent = highScore;
       coinCountElement.textContent = playerCoins;
@@ -277,18 +301,54 @@
     function persistUserData() {
       if (!currentUser) return;
       const existing = getUserData(currentUser);
-      const ownedList = ['default'].concat(ownedSkins.santa ? ['santa'] : []);
+      const ownedList = Object.keys(ownedSkins).filter(k => ownedSkins[k]);
       const userData = {
         password: existing?.password || '',
         coins: playerCoins,
         highScore: highScore,
+        bestLevel: Math.max(existing?.bestLevel || 0, bestLevel),
         upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel },
-        skins: { owned: ownedList, equipped: equippedSkin }
+        skins: { owned: ownedList, equipped: equippedSkin },
+        goldenHackerUnlocked
       };
       saveUserData(currentUser, userData);
     }
     function updateUserStatus() {
       currentUsernameElement.textContent = currentUser ? currentUser : "Guest";
+    }
+
+    // =======================================================
+    // LEADERBOARD
+    // =======================================================
+    function getLeaderboard() {
+      const leaderboard = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('stickmanUser_')) {
+          const data = JSON.parse(localStorage.getItem(key)) || {};
+          leaderboard.push({
+            username: key.replace('stickmanUser_', ''),
+            bestLevel: data.bestLevel || 0
+          });
+        }
+      }
+      leaderboard.sort((a, b) => b.bestLevel - a.bestLevel);
+      return leaderboard.slice(0, 10);
+    }
+    function updateLeaderboardUI() {
+      const tbody = document.getElementById('leaderboard-body');
+      tbody.innerHTML = '';
+      const lb = getLeaderboard();
+      lb.forEach((entry, index) => {
+        const tr = document.createElement('tr');
+        tr.className = 'table-row';
+        tr.innerHTML = `
+          <td class="p-3">${index+1}</td>
+          <td class="p-3">${entry.username}</td>
+          <td class="p-3">${entry.bestLevel}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     // =======================================================
@@ -302,16 +362,20 @@
       login: document.getElementById('login-screen'),
       menu: document.getElementById('menu-screen'),
       game: document.getElementById('game-screen'),
-      shop: document.getElementById('shop-screen')
+      shop: document.getElementById('shop-screen'),
+      leaderboard: document.getElementById('leaderboard-screen')
     };
     const gameOverModal = document.getElementById('game-over-modal');
 
     function goToScreen(targetScreen) {
-      if ((targetScreen === 'game' || targetScreen === 'shop') && !currentUser) {
+      if ((targetScreen === 'game' || targetScreen === 'shop' || targetScreen === 'leaderboard') && !currentUser) {
         alert("You must log in first!");
         targetScreen = 'login';
       }
-      if (currentScreen === targetScreen) return;
+      if (currentScreen === targetScreen) {
+        if (targetScreen === 'leaderboard') updateLeaderboardUI();
+        return;
+      }
 
       if (currentScreen === 'game') stopGame();
 
@@ -325,6 +389,9 @@
           startGame();
         } else if (targetScreen === 'shop') {
           updateShopUI();
+          updateSkinsUI();
+        } else if (targetScreen === 'leaderboard') {
+          updateLeaderboardUI();
         }
       } else {
         console.error(`Unknown screen: ${targetScreen}`);
@@ -345,7 +412,10 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const BASE_GRAVITY = 0.6;        // base gravity that scales with speed
+    // Gravity: start light (0.3) and increase as speed ramps
+    const BASE_GRAVITY_START = 0.3;
+    const MAX_GRAVITY = 1.2;
+
     const JUMP_VELOCITY = -12;
 
     // Faster speed scaling (ramps to max by 250 UI score)
@@ -369,6 +439,7 @@
     let currentSpeed = BASE_GAME_SPEED;
 
     let highScore = 0;
+    let bestLevel = 0;
     let playerCoins = 0;
 
     let timeLevel = 0;
@@ -391,15 +462,30 @@
     let coinSpawnTimer = 0;
     const COIN_SPAWN_RATE = 350;
 
+    // Skins
+    const SKINS = [
+      { id: 'santa',  name: 'Santa Skin',  cost: 5 },
+      { id: 'ninja',  name: 'Ninja Skin',  cost: 10 },
+      { id: 'robot',  name: 'Robot Skin',  cost: 15 },
+      { id: 'pirate', name: 'Pirate Skin', cost: 20 },
+      { id: 'alien',  name: 'Alien Skin',  cost: 25 },
+      { id: 'golden', name: 'Golden Skin', cost: 100 }
+    ];
+    let ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
     let equippedSkin = 'default';
-    let ownedSkins = { default: true, santa: false };
+
+    // Golden Hacker special upgrade unlocked with golden skin
+    const GOLDEN_HACKER_UPGRADE = { cooldown: 10000 };
+    let goldenHackerUnlocked = false;
+    let goldenHackerCooldownRemaining = 0;
+    let goldenHackerReady = true;
 
     // Trap rarity and threshold
     const TRAP_SPAWN_PROBABILITY = 0.015; // rare spawn
     const TRAP_MIN_UI_SCORE = 250;        // begin spawning traps at 250 UI score
 
-    // Magnet settings (value and radius are in the upgrade definition below)
-    const magnetForce = 0.025; // retained for visuals, not used by zip mode
+    // Magnet settings — zip mode uses radius from upgrade
+    const magnetForce = 0.025; // retained (not used in zip mode)
 
     // =======================================================
     // UPGRADES SETUP (UPDATED REQUIREMENTS)
@@ -477,13 +563,19 @@
     const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
     const timeCooldownText = document.getElementById('time-cooldown-text');
 
+    const goldenHackerButton = document.getElementById('golden-hacker-button');
+    const goldenHackerCooldownOverlay = document.getElementById('golden-hacker-cooldown-overlay');
+    const goldenHackerCooldownText = document.getElementById('golden-hacker-cooldown-text');
+
     // =======================================================
     // UTILS: DYNAMIC GRAVITY
     // =======================================================
     function getDynamicGravity(multiplier = 1) {
-      // Gravity scales up as speed increases
-      const speedFactor = currentSpeed / BASE_GAME_SPEED;
-      return BASE_GRAVITY * speedFactor * multiplier;
+      // Gravity starts at 0.3 and grows toward 1.2 as speed approaches max
+      const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
+      const speedFactor = Math.min((currentSpeed - BASE_GAME_SPEED) / (maxSpeed - BASE_GAME_SPEED), 1);
+      const gravity = BASE_GRAVITY_START + (MAX_GRAVITY - BASE_GRAVITY_START) * speedFactor;
+      return gravity * multiplier;
     }
 
     // =======================================================
@@ -517,32 +609,67 @@
         }
       }
       draw() {
-        if (this.skin === 'santa') {
-          ctx.fillStyle = '#ff0000';
-          ctx.fillRect(this.x, this.y, this.width, this.height);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(this.x, this.y, this.width, 5);
-          ctx.beginPath();
-          ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-        } else {
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 3;
-          ctx.lineCap = 'round';
-          // Head
-          ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-          // Body
-          const bodyTop = this.y + 10;
-          const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
-          ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-          // Arms
-          ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-          // Legs
-          ctx.beginPath();
-          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
-          ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
-          ctx.stroke();
+        // Skin-specific visuals (simple styles)
+        switch (this.skin) {
+          case 'santa':
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(this.x, this.y, this.width, 5);
+            ctx.beginPath();
+            ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            break;
+          case 'ninja':
+            ctx.fillStyle = '#0b0b0b';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#444';
+            ctx.fillRect(this.x, this.y, this.width, 4);
+            break;
+          case 'robot':
+            ctx.fillStyle = '#8a8a8a';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#00e1ff';
+            ctx.fillRect(this.x + this.width/4, this.y + 4, this.width/2, 4);
+            break;
+          case 'pirate':
+            ctx.fillStyle = '#7b3f00';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(this.x, this.y, this.width, 5);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6); // eyepatch hint
+            break;
+          case 'alien':
+            ctx.fillStyle = '#2bdc73';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#a6ffb5';
+            ctx.fillRect(this.x + this.width/4, this.y, this.width/2, 3);
+            break;
+          case 'golden':
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#fff2a8';
+            ctx.fillRect(this.x, this.y, this.width, 4);
+            break;
+          default:
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            // Head
+            ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
+            // Body
+            const bodyTop = this.y + 10;
+            const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
+            ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
+            // Arms
+            ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
+            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
+            ctx.stroke();
         }
       }
     }
@@ -560,9 +687,7 @@
         else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
         else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
       }
-      update() {
-        this.x -= currentSpeed;
-      }
+      update() { this.x -= currentSpeed; }
       draw() {
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -664,7 +789,7 @@
           ctx.fillRect(this.x, this.y, this.width, this.height);
         }
 
-        // teeth rows closing
+        // teeth rows closing (stylized)
         const stickHeight = 20;
         const stickWidth = 6;
         const spacing = 20;
@@ -739,6 +864,24 @@
       updateTimeButtonUI();
     }
 
+    // Golden Hacker — unlocked by Golden skin
+    function activateGoldenHacker() {
+      if (!goldenHackerUnlocked || !goldenHackerReady || isGameOver) return;
+      goldenHackerReady = false;
+      goldenHackerCooldownRemaining = GOLDEN_HACKER_UPGRADE.cooldown;
+
+      // Find next obstacle ahead to bypass (one per activation)
+      const target = obstacles.find(obs => obs.x > player.x && !obs.isBypassed);
+      if (target) {
+        target.isBypassed = true;
+        target.color = '#FFD700'; // golden visual
+        playerCoins += 2; // reward
+        coinCountElement.textContent = playerCoins;
+        persistUserData();
+      }
+      updateGoldenHackerButtonUI();
+    }
+
     function updateHackerButtonUI() {
       if (hackerLevel === 0) {
         hackerButton.disabled = true;
@@ -798,6 +941,31 @@
       }
     }
 
+    function updateGoldenHackerButtonUI() {
+      if (!goldenHackerUnlocked) {
+        goldenHackerButton.disabled = true;
+        goldenHackerCooldownText.textContent = 'BUY GOLDEN SKIN';
+        goldenHackerCooldownOverlay.style.height = '100%';
+        return;
+      }
+      if (goldenHackerReady) {
+        goldenHackerButton.disabled = false;
+        goldenHackerCooldownText.textContent = 'READY (G)';
+        goldenHackerCooldownOverlay.style.height = '0%';
+        goldenHackerButton.classList.remove('bg-gray-700');
+        goldenHackerButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+      } else {
+        goldenHackerButton.disabled = true;
+        goldenHackerButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+        goldenHackerButton.classList.add('bg-gray-700');
+        const totalCd = GOLDEN_HACKER_UPGRADE.cooldown;
+        const remainingSec = Math.ceil(goldenHackerCooldownRemaining / 1000);
+        const percent = (goldenHackerCooldownRemaining / totalCd) * 100;
+        goldenHackerCooldownText.textContent = `${remainingSec}s`;
+        goldenHackerCooldownOverlay.style.height = `${percent}%`;
+      }
+    }
+
     // =======================================================
     // INPUT
     // =======================================================
@@ -807,6 +975,7 @@
           if (e.code === 'Space' || e.code === 'Enter') player.jump();
           if (e.key === 'x' || e.key === 'X') activateHackerAbility();
           if (e.key === 't' || e.key === 'T') activateTimeAbility();
+          if (e.key === 'g' || e.key === 'G') activateGoldenHacker();
           if (e.key === 'ArrowDown' || e.key === 's') player.crouch(true);
         }
       });
@@ -865,23 +1034,56 @@
       if (key === 'magnet') magnetLevel = level;
     }
 
-    // Skins
-    function buySkin(skinName) {
-      if (skinName === 'santa') {
-        if (ownedSkins.santa) { alert('Already owned.'); return; }
-        if (playerCoins < 50) { alert('Not enough coins.'); return; }
-        playerCoins -= 50;
-        ownedSkins.santa = true;
-        document.getElementById('santa-owned').textContent = 'Yes';
-        coinCountElement.textContent = playerCoins;
-        updateShopUI();
-        persistUserData();
-      }
+    // Skins UI (dynamic)
+    function updateSkinsUI() {
+      const skinsList = document.getElementById('skins-list');
+      skinsList.innerHTML = '';
+      SKINS.forEach(skin => {
+        const owned = ownedSkins[skin.id];
+        const equipped = equippedSkin === skin.id;
+        const div = document.createElement('div');
+        div.className = 'bg-[#203463] p-4 rounded-lg flex justify-between items-center';
+        div.innerHTML = `
+          <div>
+            <p class="text-2xl font-bold">${skin.name}</p>
+            <p class="text-lg text-gray-300">Cost: ${skin.cost} Coins</p>
+            <p class="text-lg">Owned: <span class="font-bold ${owned ? 'text-green-400' : 'text-red-400'}">${owned ? 'Yes' : 'No'}</span></p>
+            <p class="text-lg">Equipped: <span class="font-bold ${equipped ? 'text-green-400' : 'text-red-400'}">${equipped ? 'Yes' : 'No'}</span></p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="buySkin('${skin.id}')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full ${owned ? 'opacity-50 cursor-not-allowed' : ''}" ${owned ? 'disabled' : ''}>Buy</button>
+            <button onclick="equipSkin('${skin.id}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full ${owned ? '' : 'opacity-50 cursor-not-allowed'}" ${owned ? '' : 'disabled'}>Equip</button>
+          </div>
+        `;
+        skinsList.appendChild(div);
+      });
+      // Reflect golden hacker UI
+      updateGoldenHackerButtonUI();
     }
-    function equipSkin(skinName) {
-      if (skinName === 'santa' && !ownedSkins.santa) { alert('Skin not owned.'); return; }
-      equippedSkin = skinName;
-      document.getElementById('equipped-skin').textContent = equippedSkin;
+
+    function buySkin(skinId) {
+      const skin = SKINS.find(s => s.id === skinId);
+      if (!skin) return;
+      if (ownedSkins[skinId]) { alert('Already owned.'); return; }
+      if (playerCoins < skin.cost) { alert('Not enough coins.'); return; }
+      playerCoins -= skin.cost;
+      ownedSkins[skinId] = true;
+      coinCountElement.textContent = playerCoins;
+
+      if (skinId === 'golden') {
+        goldenHackerUnlocked = true;
+        updateGoldenHackerButtonUI();
+      }
+
+      updateSkinsUI();
+      updateShopUI();
+      persistUserData();
+    }
+
+    function equipSkin(skinId) {
+      if (!ownedSkins[skinId]) { alert('Skin not owned.'); return; }
+      equippedSkin = skinId;
+      updateSkinsUI();
       if (player) player.setSkin(equippedSkin);
       persistUserData();
     }
@@ -889,8 +1091,6 @@
     function updateShopUI() {
       shopCoinCountElement.textContent = playerCoins;
       shopHighScoreElement.textContent = highScore;
-      document.getElementById('santa-owned').textContent = ownedSkins.santa ? 'Yes' : 'No';
-      document.getElementById('equipped-skin').textContent = equippedSkin;
 
       Object.keys(UPGRADES).forEach(key => {
         const upgrade = UPGRADES[key];
@@ -962,9 +1162,14 @@
       isTimeAbilityReady = true;
       timeCooldownRemaining = 0;
       timeEffectRemaining = 0;
+      if (goldenHackerUnlocked) {
+        goldenHackerReady = true;
+        goldenHackerCooldownRemaining = 0;
+      }
 
       updateHackerButtonUI();
       updateTimeButtonUI();
+      updateGoldenHackerButtonUI();
 
       player = new Player();
       player.setSkin(equippedSkin);
@@ -997,6 +1202,9 @@
       const uiScore = Math.floor(score / 10);
       scoreElement.textContent = uiScore;
 
+      // Track best level for leaderboard
+      bestLevel = Math.max(bestLevel, uiScore);
+
       // Speed ramp (faster to max)
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
@@ -1017,6 +1225,11 @@
         timeEffectRemaining -= deltaTime;
         if (timeEffectRemaining <= 0) { timeEffectRemaining = 0; currentSpeed = calculatedSpeed; }
         updateTimeButtonUI();
+      }
+      if (goldenHackerCooldownRemaining > 0) {
+        goldenHackerCooldownRemaining -= deltaTime;
+        if (goldenHackerCooldownRemaining <= 0) { goldenHackerCooldownRemaining = 0; goldenHackerReady = true; }
+        updateGoldenHackerButtonUI();
       }
 
       // Player physics with dynamic gravity
@@ -1062,7 +1275,7 @@
         traps.push(new Trap());
       }
 
-      // Coins
+      // Coins spawn
       coinSpawnTimer++;
       if (coinSpawnTimer >= COIN_SPAWN_RATE) {
         if (Math.random() < 0.6) coins.push(new Coin());
@@ -1187,6 +1400,8 @@
         highScore = finalScore;
         highScoreElement.textContent = highScore;
       }
+      // Update bestLevel in-memory and persist
+      bestLevel = Math.max(bestLevel, finalScore);
       persistUserData();
       gameOverModal.style.display = 'flex';
     }
@@ -1206,6 +1421,7 @@
       handleInput();
       updateHackerButtonUI();
       updateTimeButtonUI();
+      updateGoldenHackerButtonUI();
       window.addEventListener('mouseup', () => player?.crouch(false));
       window.addEventListener('touchend', () => player?.crouch(false));
     });
@@ -1216,40 +1432,58 @@
     // =======================================================
     /*
       Gameplay recap:
-      - Dynamic gravity increases with speed for a snappier, more challenging feel as the game ramps.
-      - Holes widen with score, but the hacker Lv3 can bypass holes as well as obstacles.
-      - Traps spawn rarely after UI score reaches 250, are subtly tinted, and instantly game over on contact.
-      - Air obstacles begin to swoop downward after late game to force varied jump timing and crouches.
-      - Time Warp resets to base speed at Lv3, or slows proportionally at lower levels; uses cooldown overlay.
-      - Money Magnet now zips coins instantly toward the player and auto-collects them when within radius:
-        - Lv1: requires overhead-ish geometry (above and horizontally overlapping).
-        - Lv2: collects from anywhere within radius.
-      - Jump upgrade allows double/triple jumps with clearly indicated levels and UI consistency.
+      - Gravity starts light (0.3) and increases with game speed to a max (1.2). Early jumps feel floaty
+        and become snappier later, balancing the challenge as speed and hole width increase.
+      - Holes widen with score, capped to avoid impossible jumps. Hacker Lv3 can bypass holes too.
+      - Traps spawn rarely after UI score hits 250, are subtly tinted to blend with the ground, and cause
+        immediate game over on contact.
+      - Air obstacles begin to swoop downward in late game, demanding varied jump+crouch timing.
 
-      UI recap:
-      - Shop displays cost, requirements, and effects per level, with buttons dynamically enabling/disabling.
-      - Account system persists coins, high score, upgrades, and skins across sessions via localStorage.
-      - Santa skin can be bought and equipped; player rendering reflects equipped skin in real-time.
-      - Ability buttons show state (READY, WARP, cooldown seconds) with animated overlays.
+      Abilities:
+      - Hacker (X): bypass obstacles; at Lv3, bypass holes as well. Cooldowns per level as configured.
+      - Time Warp (T): slows speed; Lv3 resets speed to base briefly. Cooldowns per level and effect UI overlay.
+      - Golden Hacker (G): unlocked by buying Golden Skin; bypasses one obstacle per activation, turns it golden,
+        awards +2 coins, and has a fixed 10s cooldown. Golden Hacker shows distinct READY and cooldown states.
 
-      Performance notes:
-      - Zip magnet is O(n) per frame over coins; manageable given spawn rate and typical counts.
-      - Bypass effects only mark obstacles/holes as safe; collisions skip bypassed entities.
+      Money Magnet:
+      - Zip mode: Coins within magnet radius move to the player instantly in one frame (visual zip), then collect.
+      - Lv1: zip if coin is roughly overhead (above and horizontally overlapping) within radius; 2x coin value.
+      - Lv2: zip from anywhere inside radius; 3x coin value.
+      - Standard overlap collection remains for coins not within zip conditions.
 
-      Edge cases handled:
-      - Attempting to use abilities without purchase is blocked.
-      - Shop checks high score requirements before purchase.
-      - Changing screen while in game stops the loop and persists state.
-      - Falling into holes uses a heavier gravity multiplier to create a decisive drop.
+      Skins system:
+      - Six skins: Santa (5), Ninja (10), Robot (15), Pirate (20), Alien (25), Golden (100).
+      - Dynamic shop list shows cost, Owned/Equipped status, Buy/Equip buttons with disable state logic.
+      - Equipping changes player rendering immediately. Golden skin unlocks Golden Hacker ability.
 
-      Future ideas:
-      - Add parallax backgrounds and day/night cycles keyed to score milestones.
-      - Introduce shield power-up that allows one collision forgiveness with cooldown.
-      - Add sound effects for coin pickup, trap snap, warp activation, and hacker bypass.
-      - Implement achievements (e.g., first 100 coins, first triple jump streak, trap survivor runs).
-      - Leaderboard syncing (requires backend).
+      Shop UI:
+      - Upgrades (Time, Hacker, Jump, Magnet) show current level, cost for next level, requirement messages,
+        and disable state if cannot buy due to coins or high-score requirement. Effects text updates per level.
+
+      Account system:
+      - localStorage persists users with keys stickmanUser_<username>.
+      - Stored fields: password, coins, highScore, bestLevel, upgrades, skins list, equipped skin,
+        and goldenHackerUnlocked flag. Login loads state, logout persists and resets runtime state.
+
+      Leaderboard:
+      - Scans all stickmanUser_* entries and reads bestLevel.
+      - Displays top 10 players sorted by bestLevel on the Leaderboard screen.
+
+      Performance considerations:
+      - Zip magnet causes O(n) updates on coin list per frame; given spawn rates and canvas scope, this is fine.
+      - Drawing is simple canvas operations; skins are simple rectangles and accents to avoid heavy rendering overhead.
+
+      Edge cases:
+      - Ability use blocked if not purchased/unlocked, not ready, or game over state.
+      - Screen transitions stop the game loop to avoid running updates in background.
+      - Persist after coin collection and game over to ensure leaderboard and coin counts stay updated.
+
+      Potential future enhancements:
+      - Add audio cues for pickups and ability use.
+      - Parallax backgrounds and particle effects for speed ramps.
+      - Achievements and badges tied to bestLevel milestones.
+      - Cloud leaderboard sync with a backend and auth.
     */
-
   </script>
 </body>
 </html>
