@@ -18,6 +18,7 @@
     .table-header { background-color: #1f2a44; }
     .table-row { background-color: #203463; }
     .table-row:nth-child(odd) { background-color: #1b2c4a; }
+    .skin-preview { border: 1px solid #374151; border-radius: 6px; background: #111827; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
@@ -271,7 +272,7 @@
       hackerLevel = 0;
       jumpLevel = 0;
       magnetLevel = 0;
-      ownedSkins = { default: true, santa: false, ninja: false, robot: false, pirate: false, alien: false, golden: false };
+      ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
       equippedSkin = 'default';
       goldenHackerUnlocked = false;
 
@@ -412,7 +413,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Gravity: start light (0.3) and increase as speed ramps
+    // Gravity: start light (0.3) and increase as speed ramps to max (1.2)
     const BASE_GRAVITY_START = 0.3;
     const MAX_GRAVITY = 1.2;
 
@@ -485,7 +486,7 @@
     const TRAP_MIN_UI_SCORE = 250;        // begin spawning traps at 250 UI score
 
     // Magnet settings — zip mode uses radius from upgrade
-    const magnetForce = 0.025; // retained (not used in zip mode)
+    const magnetForce = 0.025; // retained (not used directly in zip mode)
 
     // =======================================================
     // UPGRADES SETUP (UPDATED REQUIREMENTS)
@@ -574,7 +575,7 @@
       // Gravity starts at 0.3 and grows toward 1.2 as speed approaches max
       const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
       const speedFactor = Math.min((currentSpeed - BASE_GAME_SPEED) / (maxSpeed - BASE_GAME_SPEED), 1);
-      const gravity = BASE_GRAVITY_START + (MAX_GRAVITY - BASE_GRAVITY_START) * speedFactor;
+      const gravity = BASE_GRAVITY_START + (MAX_GRAVITY - BASE_GRAVITY_START) * Math.max(0, speedFactor);
       return gravity * multiplier;
     }
 
@@ -616,42 +617,34 @@
             ctx.fillRect(this.x, this.y, this.width, this.height);
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(this.x, this.y, this.width, 5);
-            ctx.beginPath();
-            ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
+            ctx.fillStyle = '#ffffff'; ctx.fill();
             break;
           case 'ninja':
             ctx.fillStyle = '#0b0b0b';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#444';
-            ctx.fillRect(this.x, this.y, this.width, 4);
+            ctx.fillStyle = '#444'; ctx.fillRect(this.x, this.y, this.width, 4);
             break;
           case 'robot':
             ctx.fillStyle = '#8a8a8a';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#00e1ff';
-            ctx.fillRect(this.x + this.width/4, this.y + 4, this.width/2, 4);
+            ctx.fillStyle = '#00e1ff'; ctx.fillRect(this.x + this.width/4, this.y + 4, this.width/2, 4);
             break;
           case 'pirate':
             ctx.fillStyle = '#7b3f00';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#222';
-            ctx.fillRect(this.x, this.y, this.width, 5);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6); // eyepatch hint
+            ctx.fillStyle = '#222'; ctx.fillRect(this.x, this.y, this.width, 5);
+            ctx.fillStyle = '#000'; ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6); // eyepatch hint
             break;
           case 'alien':
             ctx.fillStyle = '#2bdc73';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#a6ffb5';
-            ctx.fillRect(this.x + this.width/4, this.y, this.width/2, 3);
+            ctx.fillStyle = '#a6ffb5'; ctx.fillRect(this.x + this.width/4, this.y, this.width/2, 3);
             break;
           case 'golden':
             ctx.fillStyle = '#FFD700';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#fff2a8';
-            ctx.fillRect(this.x, this.y, this.width, 4);
+            ctx.fillStyle = '#fff2a8'; ctx.fillRect(this.x, this.y, this.width, 4);
             break;
           default:
             ctx.strokeStyle = '#FFFFFF';
@@ -1034,7 +1027,7 @@
       if (key === 'magnet') magnetLevel = level;
     }
 
-    // Skins UI (dynamic)
+    // Skins UI (dynamic with previews)
     function updateSkinsUI() {
       const skinsList = document.getElementById('skins-list');
       skinsList.innerHTML = '';
@@ -1042,23 +1035,72 @@
         const owned = ownedSkins[skin.id];
         const equipped = equippedSkin === skin.id;
         const div = document.createElement('div');
-        div.className = 'bg-[#203463] p-4 rounded-lg flex justify-between items-center';
+        div.className = 'bg-[#203463] p-4 rounded-lg';
+
         div.innerHTML = `
-          <div>
-            <p class="text-2xl font-bold">${skin.name}</p>
-            <p class="text-lg text-gray-300">Cost: ${skin.cost} Coins</p>
-            <p class="text-lg">Owned: <span class="font-bold ${owned ? 'text-green-400' : 'text-red-400'}">${owned ? 'Yes' : 'No'}</span></p>
-            <p class="text-lg">Equipped: <span class="font-bold ${equipped ? 'text-green-400' : 'text-red-400'}">${equipped ? 'Yes' : 'No'}</span></p>
+          <div class="flex items-center gap-4">
+            <canvas id="preview-${skin.id}" width="50" height="70" class="skin-preview"></canvas>
+            <div>
+              <p class="text-2xl font-bold">${skin.name}</p>
+              <p class="text-lg text-gray-300">Cost: ${skin.cost} Coins</p>
+              <p class="text-lg">Owned: <span class="font-bold ${owned ? 'text-green-400' : 'text-red-400'}">${owned ? 'Yes' : 'No'}</span></p>
+              <p class="text-lg">Equipped: <span class="font-bold ${equipped ? 'text-green-400' : 'text-red-400'}">${equipped ? 'Yes' : 'No'}</span></p>
+            </div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 mt-3">
             <button onclick="buySkin('${skin.id}')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full ${owned ? 'opacity-50 cursor-not-allowed' : ''}" ${owned ? 'disabled' : ''}>Buy</button>
             <button onclick="equipSkin('${skin.id}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full ${owned ? '' : 'opacity-50 cursor-not-allowed'}" ${owned ? '' : 'disabled'}>Equip</button>
           </div>
         `;
         skinsList.appendChild(div);
+        renderSkinPreview(skin.id);
       });
       // Reflect golden hacker UI
       updateGoldenHackerButtonUI();
+    }
+
+    function renderSkinPreview(skinId) {
+      const canvas = document.getElementById(`preview-${skinId}`);
+      if (!canvas) return;
+      const ctxP = canvas.getContext('2d');
+      ctxP.clearRect(0, 0, canvas.width, canvas.height);
+
+      const x = 15, y = 20, w = 20, h = 30;
+
+      switch (skinId) {
+        case 'santa':
+          ctxP.fillStyle = '#ff0000'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#ffffff'; ctxP.fillRect(x, y, w, 5);
+          ctxP.beginPath(); ctxP.arc(x + w/2, y - 8, 6, 0, Math.PI*2); ctxP.fillStyle = '#ffffff'; ctxP.fill();
+          break;
+        case 'ninja':
+          ctxP.fillStyle = '#0b0b0b'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#444'; ctxP.fillRect(x, y, w, 4);
+          break;
+        case 'robot':
+          ctxP.fillStyle = '#8a8a8a'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#00e1ff'; ctxP.fillRect(x + w/4, y + 6, w/2, 4);
+          break;
+        case 'pirate':
+          ctxP.fillStyle = '#7b3f00'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#222'; ctxP.fillRect(x, y, w, 5);
+          ctxP.fillStyle = '#000'; ctxP.fillRect(x + w - 6, y + 6, 6, 6);
+          break;
+        case 'alien':
+          ctxP.fillStyle = '#2bdc73'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#a6ffb5'; ctxP.fillRect(x + w/4, y, w/2, 3);
+          break;
+        case 'golden':
+          ctxP.fillStyle = '#FFD700'; ctxP.fillRect(x, y, w, h);
+          ctxP.fillStyle = '#fff2a8'; ctxP.fillRect(x, y, w, 4);
+          break;
+        default:
+          ctxP.strokeStyle = '#FFFFFF'; ctxP.strokeRect(x, y, w, h);
+      }
+
+      // simple head
+      ctxP.beginPath(); ctxP.arc(x + w/2, y - 5, 5, 0, Math.PI * 2);
+      ctxP.strokeStyle = '#FFFFFF'; ctxP.stroke();
     }
 
     function buySkin(skinId) {
@@ -1428,61 +1470,15 @@
 
     // =======================================================
     // EXTENDED COMMENTS AND NOTES BLOCK
-    // (Intentionally verbose to keep this unified file over 1,000 lines)
+    // (Kept for clarity and maintainability)
     // =======================================================
     /*
-      Gameplay recap:
-      - Gravity starts light (0.3) and increases with game speed to a max (1.2). Early jumps feel floaty
-        and become snappier later, balancing the challenge as speed and hole width increase.
-      - Holes widen with score, capped to avoid impossible jumps. Hacker Lv3 can bypass holes too.
-      - Traps spawn rarely after UI score hits 250, are subtly tinted to blend with the ground, and cause
-        immediate game over on contact.
-      - Air obstacles begin to swoop downward in late game, demanding varied jump+crouch timing.
-
-      Abilities:
-      - Hacker (X): bypass obstacles; at Lv3, bypass holes as well. Cooldowns per level as configured.
-      - Time Warp (T): slows speed; Lv3 resets speed to base briefly. Cooldowns per level and effect UI overlay.
-      - Golden Hacker (G): unlocked by buying Golden Skin; bypasses one obstacle per activation, turns it golden,
-        awards +2 coins, and has a fixed 10s cooldown. Golden Hacker shows distinct READY and cooldown states.
-
-      Money Magnet:
-      - Zip mode: Coins within magnet radius move to the player instantly in one frame (visual zip), then collect.
-      - Lv1: zip if coin is roughly overhead (above and horizontally overlapping) within radius; 2x coin value.
-      - Lv2: zip from anywhere inside radius; 3x coin value.
-      - Standard overlap collection remains for coins not within zip conditions.
-
-      Skins system:
-      - Six skins: Santa (5), Ninja (10), Robot (15), Pirate (20), Alien (25), Golden (100).
-      - Dynamic shop list shows cost, Owned/Equipped status, Buy/Equip buttons with disable state logic.
-      - Equipping changes player rendering immediately. Golden skin unlocks Golden Hacker ability.
-
-      Shop UI:
-      - Upgrades (Time, Hacker, Jump, Magnet) show current level, cost for next level, requirement messages,
-        and disable state if cannot buy due to coins or high-score requirement. Effects text updates per level.
-
-      Account system:
-      - localStorage persists users with keys stickmanUser_<username>.
-      - Stored fields: password, coins, highScore, bestLevel, upgrades, skins list, equipped skin,
-        and goldenHackerUnlocked flag. Login loads state, logout persists and resets runtime state.
-
-      Leaderboard:
-      - Scans all stickmanUser_* entries and reads bestLevel.
-      - Displays top 10 players sorted by bestLevel on the Leaderboard screen.
-
-      Performance considerations:
-      - Zip magnet causes O(n) updates on coin list per frame; given spawn rates and canvas scope, this is fine.
-      - Drawing is simple canvas operations; skins are simple rectangles and accents to avoid heavy rendering overhead.
-
-      Edge cases:
-      - Ability use blocked if not purchased/unlocked, not ready, or game over state.
-      - Screen transitions stop the game loop to avoid running updates in background.
-      - Persist after coin collection and game over to ensure leaderboard and coin counts stay updated.
-
-      Potential future enhancements:
-      - Add audio cues for pickups and ability use.
-      - Parallax backgrounds and particle effects for speed ramps.
-      - Achievements and badges tied to bestLevel milestones.
-      - Cloud leaderboard sync with a backend and auth.
+      - Six skins with previews and escalating costs; Golden unlocks Golden Hacker.
+      - Leaderboard shows best level across users (localStorage).
+      - Gravity starts light and scales up with speed.
+      - Money Magnet zip collection for quick feedback.
+      - Hacker, Time Warp, and Golden Hacker abilities with cooldowns and UI states.
+      - Holes widen with score; rare traps after 250 UI score; air obstacles swoop late-game.
     */
   </script>
 </body>
