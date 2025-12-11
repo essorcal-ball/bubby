@@ -19,6 +19,11 @@
     .table-row { background-color: #203463; }
     .table-row:nth-child(odd) { background-color: #1b2c4a; }
     .skin-preview { border: 1px solid #374151; border-radius: 6px; background: #111827; }
+    .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; display: inline-block; }
+    .badge-not { background: #10b98122; color: #10b981; border: 1px solid #10b98155; }
+    .badge-bad { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b55; }
+    .badge-horrible { background: #ef444422; color: #ef4444; border: 1px solid #ef444455; }
+    .badge-very { background: #7c3aed22; color: #7c3aed; border: 1px solid #7c3aed55; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
@@ -99,6 +104,18 @@
           <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
           <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
           <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">Try Again!</button>
+        </div>
+      </div>
+
+      <!-- CURSE MODAL -->
+      <div id="curse-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+        <div class="bg-[#0f172a] p-6 md:p-8 rounded-xl shadow-2xl border-4 border-[#e94560] max-w-3xl w-full">
+          <h3 class="text-3xl md:text-4xl font-extrabold mb-4 text-white">Choose your curse</h3>
+          <p class="text-sm md:text-base text-gray-300 mb-6">Every 100 levels, you must choose one curse. Some last for a duration, some are permanent.</p>
+          <div id="curse-options" class="grid md:grid-cols-3 gap-4"></div>
+          <div class="mt-6 flex justify-end">
+            <button id="skip-curse-button" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled>Skip (disabled)</button>
+          </div>
         </div>
       </div>
     </div>
@@ -367,6 +384,8 @@
       leaderboard: document.getElementById('leaderboard-screen')
     };
     const gameOverModal = document.getElementById('game-over-modal');
+    const curseModal = document.getElementById('curse-modal');
+    const curseOptionsContainer = document.getElementById('curse-options');
 
     function goToScreen(targetScreen) {
       if ((targetScreen === 'game' || targetScreen === 'shop' || targetScreen === 'leaderboard') && !currentUser) {
@@ -413,13 +432,14 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Gravity: start light (0.3) and increase as speed ramps to max (1.2)
-    const BASE_GRAVITY_START = 0.3;
-    const MAX_GRAVITY = 1.2;
+    // Gravity: start at 0.4 and increase slowly
+    const BASE_GRAVITY_START = 0.4;
+    const MAX_GRAVITY = 1.0; // lower cap to keep late-game less punishing
+    const GRAVITY_SLOW_FACTOR = 1.5; // increases more slowly
 
     const JUMP_VELOCITY = -12;
 
-    // Faster speed scaling (ramps to max by 250 UI score)
+    // Speed scaling (ramps to max by 250 UI score)
     const BASE_GAME_SPEED = 4.0;
     const MAX_GAME_SPEED_INCREASE = 8.0;
     const MAX_SCORE_FOR_SPEED = 250;
@@ -459,6 +479,9 @@
     let timeEffectRemaining = 0;
 
     let isGameOver = false;
+    let isPausedForCurse = false;
+    let lastCurseThresholdAwarded = 0;
+
     let obstacleSpawnTimer = 0;
     let coinSpawnTimer = 0;
     const COIN_SPAWN_RATE = 350;
@@ -494,7 +517,7 @@
     const TIME_UPGRADE = {
       costs: [12, 20, 35],
       cooldowns: [30000, 20000, 35000],
-      highScoreRequirement: [200, 300, 0], // Lv1 requires 200
+      highScoreRequirement: [200, 300, 0],
       effectDuration: [4000, 5000, 6000],
       slowdownFactor: [0.7, 0.5, 'BASE'],
       maxLevel: 3,
@@ -510,7 +533,7 @@
     const HACKER_UPGRADE = {
       costs: [10, 25, 40],
       cooldowns: [9000, 13000, 16000],
-      highScoreRequirement: [200, 550, 800], // Lv1 requires 200
+      highScoreRequirement: [200, 550, 800],
       maxLevel: 3,
       effect: (level) => {
         if (level === 0) return 'Not yet purchased.';
@@ -547,6 +570,210 @@
     const UPGRADES = { time: TIME_UPGRADE, hacker: HACKER_UPGRADE, jump: JUMP_UPGRADE, magnet: MAGNET_UPGRADE };
 
     // =======================================================
+    // CURSE SYSTEM
+    // =======================================================
+    // Ratings: not so bad, bad, horrible, very horrible
+    const CURSE_RATING_CLASS = {
+      'Not so bad': 'badge badge-not',
+      'Bad': 'badge badge-bad',
+      'Horrible': 'badge badge-horrible',
+      'Very Horrible': 'badge badge-very'
+    };
+
+    // Active curse state
+    let activeCurses = []; // [{id, name, rating, expiresAt(null if permanent)}]
+    let curseTimers = {};  // id -> remaining ms for timed curses
+
+    // Effects toggles
+    let curseFogActive = false;
+    let curseCoinTaxActive = false;
+    let curseSlipperyActive = false;
+    let curseDoubleGravityActive = false;
+    let curseSlowRecoverActive = false;
+    let curseMagnetMalfunctionActive = false;
+    let curseObstacleFrenzyActive = false;
+    let curseTrapStormActive = false;
+    let curseBlindBarActive = false;
+    let cursePermanentGravityBoost = 0;  // accumulates
+    let curseCoinDrainActive = false;
+    let curseSpeedSurgeActive = false;
+
+    // Blind bar settings
+    const blindBar = { x: 0, w: 80, h: 9999 };
+
+    // Coin drain timer
+    let coinDrainTimer = 0;
+
+    // Curse pool
+    const CURSES = [
+      // Not so bad
+      { id: 'fog', name: 'Foggy Vision', rating: 'Not so bad', duration: 30000,
+        description: 'A soft fog reduces visibility for 30s.',
+        apply: () => { curseFogActive = true; },
+        cleanup: () => { curseFogActive = false; }
+      },
+      { id: 'coinTax', name: 'Coin Tax', rating: 'Not so bad', duration: 20000,
+        description: 'Coins grant half value for 20s.',
+        apply: () => { curseCoinTaxActive = true; },
+        cleanup: () => { curseCoinTaxActive = false; }
+      },
+      { id: 'slippery', name: 'Slippery Feet', rating: 'Not so bad', duration: 20000,
+        description: 'Landing slides you slightly for 20s.',
+        apply: () => { curseSlipperyActive = true; },
+        cleanup: () => { curseSlipperyActive = false; }
+      },
+
+      // Bad
+      { id: 'doubleGravity', name: 'Double Gravity', rating: 'Bad', duration: 15000,
+        description: 'Gravity doubles for 15s.',
+        apply: () => { curseDoubleGravityActive = true; },
+        cleanup: () => { curseDoubleGravityActive = false; }
+      },
+      { id: 'slowRecover', name: 'Slow Recovery', rating: 'Bad', duration: 20000,
+        description: 'Crouch recovery becomes sluggish for 20s.',
+        apply: () => { curseSlowRecoverActive = true; },
+        cleanup: () => { curseSlowRecoverActive = false; }
+      },
+      { id: 'magnetMalfunction', name: 'Magnet Malfunction', rating: 'Bad', duration: 20000,
+        description: 'Magnet repels coins for 20s.',
+        apply: () => { curseMagnetMalfunctionActive = true; },
+        cleanup: () => { curseMagnetMalfunctionActive = false; }
+      },
+
+      // Horrible
+      { id: 'obstacleFrenzy', name: 'Obstacle Frenzy', rating: 'Horrible', duration: 30000,
+        description: 'Obstacle spawn rate doubles for 30s.',
+        apply: () => { curseObstacleFrenzyActive = true; },
+        cleanup: () => { curseObstacleFrenzyActive = false; }
+      },
+      { id: 'trapStorm', name: 'Trap Storm', rating: 'Horrible', duration: 25000,
+        description: 'Traps spawn much more frequently for 25s.',
+        apply: () => { curseTrapStormActive = true; },
+        cleanup: () => { curseTrapStormActive = false; }
+      },
+      { id: 'blindBar', name: 'Blind Spot', rating: 'Horrible', duration: 25000,
+        description: 'A black bar blocks part of your view for 25s.',
+        apply: () => { curseBlindBarActive = true; blindBar.x = Math.random() * 200 + 80; blindBar.w = 80 + Math.random()*80; },
+        cleanup: () => { curseBlindBarActive = false; }
+      },
+
+      // Very Horrible (permanent)
+      { id: 'permGravity', name: 'Permanent Gravity Boost', rating: 'Very Horrible', duration: null,
+        description: 'Gravity permanently increases by +0.3.',
+        apply: () => { cursePermanentGravityBoost += 0.3; },
+        cleanup: () => {}
+      },
+      { id: 'coinDrain', name: 'Coin Drain', rating: 'Very Horrible', duration: null,
+        description: 'Lose 1 coin every 5 seconds until game over.',
+        apply: () => { curseCoinDrainActive = true; coinDrainTimer = 0; },
+        cleanup: () => {}
+      },
+      { id: 'speedSurge', name: 'Speed Surge', rating: 'Very Horrible', duration: null,
+        description: 'Base speed permanently increases by +2.',
+        apply: () => { curseSpeedSurgeActive = true; },
+        cleanup: () => {}
+      }
+    ];
+
+    function pickRandomCurses(count = 3) {
+      const pool = [...CURSES];
+      const picks = [];
+      for (let i = 0; i < count && pool.length > 0; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        picks.push(pool[idx]);
+        pool.splice(idx, 1);
+      }
+      return picks;
+    }
+
+    function showCurseChoice() {
+      isPausedForCurse = true;
+      curseModal.style.display = 'flex';
+      curseOptionsContainer.innerHTML = '';
+      const options = pickRandomCurses(3);
+      options.forEach(curse => {
+        const card = document.createElement('div');
+        card.className = 'bg-[#1b2c4a] p-4 rounded-lg border-2 border-[#1c305c] flex flex-col justify-between';
+        const badgeClass = CURSE_RATING_CLASS[curse.rating] || 'badge';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <h4 class="text-xl font-bold text-white">${curse.name}</h4>
+              <span class="${badgeClass}">${curse.rating}</span>
+            </div>
+            <p class="text-sm text-gray-300 mt-2">${curse.description}</p>
+            <p class="text-xs text-gray-400 mt-1">${curse.duration ? `Duration: ${Math.floor(curse.duration/1000)}s` : 'Permanent'}</p>
+          </div>
+          <button class="mt-4 bg-[#e94560] hover:bg-[#d53e54] text-white font-bold py-2 px-4 rounded-lg">Choose</button>
+        `;
+        const btn = card.querySelector('button');
+        btn.addEventListener('click', () => applyCurseAndResume(curse));
+        curseOptionsContainer.appendChild(card);
+      });
+    }
+
+    function applyCurseAndResume(curse) {
+      curse.apply();
+      const now = performance.now();
+      activeCurses.push({
+        id: curse.id, name: curse.name, rating: curse.rating,
+        expiresAt: curse.duration ? now + curse.duration : null
+      });
+      if (curse.duration) curseTimers[curse.id] = curse.duration;
+
+      // Update permanent values immediately
+      if (curse.id === 'speedSurge') {
+        // Increase base speed; keep max speed increase same so curve shifts up modestly
+        // We won't mutate constants; instead apply an offset in speed calc
+        // Marked via curseSpeedSurgeActive flag
+      }
+
+      resumeAfterCurse();
+    }
+
+    function resumeAfterCurse() {
+      curseModal.style.display = 'none';
+      isPausedForCurse = false;
+      lastCurseThresholdAwarded = Math.floor((score/10) / 100) * 100; // record the 100s threshold
+      // Re-launch loop if it was stopped
+      if (!animationFrameId && currentScreen === 'game' && !isGameOver) {
+        lastTime = 0;
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function updateCurses(deltaTime) {
+      if (activeCurses.length === 0) return;
+      const now = performance.now();
+      for (let i = activeCurses.length - 1; i >= 0; i--) {
+        const c = activeCurses[i];
+        if (c.expiresAt && now >= c.expiresAt) {
+          // cleanup and remove
+          const curseDef = CURSES.find(x => x.id === c.id);
+          if (curseDef && curseDef.cleanup) curseDef.cleanup();
+          delete curseTimers[c.id];
+          activeCurses.splice(i, 1);
+        } else if (c.expiresAt) {
+          // decrement timer
+          curseTimers[c.id] = Math.max(0, curseTimers[c.id] - deltaTime);
+        }
+      }
+
+      // Coin drain ticking
+      if (curseCoinDrainActive) {
+        coinDrainTimer += deltaTime;
+        if (coinDrainTimer >= 5000) {
+          coinDrainTimer = 0;
+          if (playerCoins > 0) {
+            playerCoins -= 1;
+            coinCountElement.textContent = playerCoins;
+            persistUserData();
+          }
+        }
+      }
+    }
+
+    // =======================================================
     // UI ELEMENTS
     // =======================================================
     const scoreElement = document.getElementById('current-score');
@@ -572,10 +799,13 @@
     // UTILS: DYNAMIC GRAVITY
     // =======================================================
     function getDynamicGravity(multiplier = 1) {
-      // Gravity starts at 0.3 and grows toward 1.2 as speed approaches max
       const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
-      const speedFactor = Math.min((currentSpeed - BASE_GAME_SPEED) / (maxSpeed - BASE_GAME_SPEED), 1);
-      const gravity = BASE_GRAVITY_START + (MAX_GRAVITY - BASE_GRAVITY_START) * Math.max(0, speedFactor);
+      let baseSpeedAdj = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
+      // Slow growth factor
+      const speedFactor = Math.min((currentSpeed - baseSpeedAdj) / ((maxSpeed - baseSpeedAdj) * GRAVITY_SLOW_FACTOR), 1);
+      const gravityBase = BASE_GRAVITY_START + cursePermanentGravityBoost;
+      let gravity = gravityBase + (MAX_GRAVITY - gravityBase) * Math.max(0, speedFactor);
+      if (curseDoubleGravityActive) gravity *= 2;
       return gravity * multiplier;
     }
 
@@ -591,12 +821,22 @@
         this.velocityY = 0;
         this.isCrouching = false;
         this.skin = equippedSkin;
+        this.slideVelocityX = 0; // for slippery curse
       }
       setSkin(skinName) { this.skin = skinName; }
       crouch(on) {
         this.isCrouching = on;
-        this.height = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
-        this.y = canvas.height - GROUND_HEIGHT - this.height;
+        const targetHeight = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
+        if (curseSlowRecoverActive && !on) {
+          // delay recovery
+          setTimeout(() => {
+            this.height = targetHeight;
+            this.y = canvas.height - GROUND_HEIGHT - this.height;
+          }, 250);
+        } else {
+          this.height = targetHeight;
+          this.y = canvas.height - GROUND_HEIGHT - this.height;
+        }
       }
       jump() {
         if (!isGameOver && !isFalling && !this.isCrouching) {
@@ -610,7 +850,7 @@
         }
       }
       draw() {
-        // Skin-specific visuals (simple styles)
+        // Skin visuals
         switch (this.skin) {
           case 'santa':
             ctx.fillStyle = '#ff0000';
@@ -634,7 +874,7 @@
             ctx.fillStyle = '#7b3f00';
             ctx.fillRect(this.x, this.y, this.width, this.height);
             ctx.fillStyle = '#222'; ctx.fillRect(this.x, this.y, this.width, 5);
-            ctx.fillStyle = '#000'; ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6); // eyepatch hint
+            ctx.fillStyle = '#000'; ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6);
             break;
           case 'alien':
             ctx.fillStyle = '#2bdc73';
@@ -650,15 +890,11 @@
             ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = 3;
             ctx.lineCap = 'round';
-            // Head
             ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-            // Body
             const bodyTop = this.y + 10;
             const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
             ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-            // Arms
             ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-            // Legs
             ctx.beginPath();
             ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
             ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
@@ -674,7 +910,6 @@
         this.color = '#FFD700';
         this.baseValue = 1;
 
-        // spawn height variations
         const level = Math.floor(Math.random() * 3);
         if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
         else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
@@ -724,13 +959,12 @@
       }
     }
 
-    // Hole widens with score
     class Hole {
       constructor() {
         const baseWidth = 75;
         const randomExtra = Math.random() * 75;
         const uiScore = Math.floor(score / 10);
-        const scaling = Math.min(uiScore / 200, 3); // caps at 3x factor
+        const scaling = Math.min(uiScore / 200, 3);
         this.width = (baseWidth + randomExtra) * (1 + scaling * 0.3);
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
@@ -752,7 +986,6 @@
       }
     }
 
-    // Bear trap that subtly blends into ground and snaps shut on contact
     class Trap {
       constructor() {
         this.width = 75 + Math.random() * 75;
@@ -760,10 +993,9 @@
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        // Match ground color with faint red tint to be overlooked
         this.color = '#2d3748';
-        this.tintAlpha = 0.08;     // subtle red tint
-        this.animationProgress = 0; // 0 → 1 for closing jaws
+        this.tintAlpha = 0.08;
+        this.animationProgress = 0;
       }
       update() {
         this.x -= currentSpeed;
@@ -772,36 +1004,26 @@
         }
       }
       draw() {
-        // Base area (blend into ground)
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
-
-        // subtle tint overlay
         if (!this.isTriggered) {
           ctx.fillStyle = `rgba(255,0,0,${this.tintAlpha})`;
           ctx.fillRect(this.x, this.y, this.width, this.height);
         }
-
-        // teeth rows closing (stylized)
         const stickHeight = 20;
         const stickWidth = 6;
         const spacing = 20;
         const numSticks = Math.floor(this.width / spacing);
         const topRowY = this.y;
         const bottomRowY = this.y;
-
         for (let i = 0; i < numSticks; i++) {
           const baseX = this.x + i * spacing + 5;
-
-          // Left jaw
           ctx.save();
           ctx.translate(baseX, topRowY);
           if (this.isTriggered) ctx.rotate(-Math.PI / 4 * this.animationProgress);
           ctx.fillStyle = '#2b2f3a';
           ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
           ctx.restore();
-
-          // Right jaw
           ctx.save();
           ctx.translate(baseX + spacing/2, bottomRowY);
           if (this.isTriggered) ctx.rotate(Math.PI / 4 * this.animationProgress);
@@ -816,7 +1038,7 @@
     // ABILITIES
     // =======================================================
     function activateHackerAbility() {
-      if (hackerLevel === 0 || !isHackerAbilityReady || isGameOver) return;
+      if (hackerLevel === 0 || !isHackerAbilityReady || isGameOver || isPausedForCurse) return;
       isHackerAbilityReady = false;
       const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
       hackerCooldownRemaining = currentCooldown;
@@ -825,7 +1047,6 @@
       if (hackerLevel === 2) bypassCount = 2;
       if (hackerLevel === 3) bypassCount = 3;
 
-      // Collect obstacles ahead (and holes if Lv3)
       let targets = obstacles.filter(obs => obs.x > player.x && !obs.isBypassed);
       if (hackerLevel === 3) {
         const holeTargets = holes.filter(h => !h.isBypassed && h.x > player.x);
@@ -836,39 +1057,37 @@
         const target = targets[i];
         if (target instanceof Obstacle) {
           target.isBypassed = true;
-          target.color = '#059669'; // green for bypassed obstacle
+          target.color = '#059669';
         } else if (target instanceof Hole) {
           target.isBypassed = true;
-          target.color = '#34d399'; // bright green for safe hole
+          target.color = '#34d399';
         }
       }
       updateHackerButtonUI();
     }
 
     function activateTimeAbility() {
-      if (timeLevel === 0 || !isTimeAbilityReady || isGameOver) return;
+      if (timeLevel === 0 || !isTimeAbilityReady || isGameOver || isPausedForCurse) return;
       isTimeAbilityReady = false;
       const currentCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
       timeCooldownRemaining = currentCooldown;
       const factor = TIME_UPGRADE.slowdownFactor[timeLevel - 1];
-      currentSpeed = factor === 'BASE' ? BASE_GAME_SPEED : currentSpeed * factor;
+      currentSpeed = factor === 'BASE' ? BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0) : currentSpeed * factor;
       timeEffectRemaining = TIME_UPGRADE.effectDuration[timeLevel - 1];
       canvas.style.borderColor = '#60a5fa';
       updateTimeButtonUI();
     }
 
-    // Golden Hacker — unlocked by Golden skin
     function activateGoldenHacker() {
-      if (!goldenHackerUnlocked || !goldenHackerReady || isGameOver) return;
+      if (!goldenHackerUnlocked || !goldenHackerReady || isGameOver || isPausedForCurse) return;
       goldenHackerReady = false;
       goldenHackerCooldownRemaining = GOLDEN_HACKER_UPGRADE.cooldown;
 
-      // Find next obstacle ahead to bypass (one per activation)
       const target = obstacles.find(obs => obs.x > player.x && !obs.isBypassed);
       if (target) {
         target.isBypassed = true;
-        target.color = '#FFD700'; // golden visual
-        playerCoins += 2; // reward
+        target.color = '#FFD700';
+        playerCoins += 2;
         coinCountElement.textContent = playerCoins;
         persistUserData();
       }
@@ -882,7 +1101,7 @@
         hackerCooldownOverlay.style.height = '100%';
         return;
       }
-      if (isHackerAbilityReady) {
+      if (isHackerAbilityReady && !isPausedForCurse) {
         hackerButton.disabled = false;
         hackerCooldownText.textContent = 'READY (X)';
         hackerCooldownOverlay.style.height = '0%';
@@ -895,8 +1114,8 @@
         const totalCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
         const remainingSec = Math.ceil(hackerCooldownRemaining / 1000);
         const percent = (hackerCooldownRemaining / totalCooldown) * 100;
-        hackerCooldownText.textContent = `${remainingSec}s`;
-        hackerCooldownOverlay.style.height = `${percent}%`;
+        hackerCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        hackerCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
 
@@ -916,7 +1135,7 @@
         timeButton.classList.add('bg-blue-800');
         return;
       }
-      if (isTimeAbilityReady) {
+      if (isTimeAbilityReady && !isPausedForCurse) {
         timeButton.disabled = false;
         timeCooldownText.textContent = 'READY (T)';
         timeCooldownOverlay.style.height = '0%';
@@ -929,8 +1148,8 @@
         const totalCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
         const remainingSec = Math.ceil(timeCooldownRemaining / 1000);
         const percent = (timeCooldownRemaining / totalCooldown) * 100;
-        timeCooldownText.textContent = `${remainingSec}s`;
-        timeCooldownOverlay.style.height = `${percent}%`;
+        timeCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        timeCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
 
@@ -941,7 +1160,7 @@
         goldenHackerCooldownOverlay.style.height = '100%';
         return;
       }
-      if (goldenHackerReady) {
+      if (goldenHackerReady && !isPausedForCurse) {
         goldenHackerButton.disabled = false;
         goldenHackerCooldownText.textContent = 'READY (G)';
         goldenHackerCooldownOverlay.style.height = '0%';
@@ -954,8 +1173,8 @@
         const totalCd = GOLDEN_HACKER_UPGRADE.cooldown;
         const remainingSec = Math.ceil(goldenHackerCooldownRemaining / 1000);
         const percent = (goldenHackerCooldownRemaining / totalCd) * 100;
-        goldenHackerCooldownText.textContent = `${remainingSec}s`;
-        goldenHackerCooldownOverlay.style.height = `${percent}%`;
+        goldenHackerCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        goldenHackerCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
 
@@ -964,7 +1183,7 @@
     // =======================================================
     function handleInput() {
       document.addEventListener('keydown', (e) => {
-        if (!isGameOver) {
+        if (!isGameOver && !isPausedForCurse) {
           if (e.code === 'Space' || e.code === 'Enter') player.jump();
           if (e.key === 'x' || e.key === 'X') activateHackerAbility();
           if (e.key === 't' || e.key === 'T') activateTimeAbility();
@@ -976,17 +1195,16 @@
         if (e.key === 'ArrowDown' || e.key === 's') player.crouch(false);
       });
 
-      document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver) player.jump(); });
+      document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver && !isPausedForCurse) player.jump(); });
 
-      // Mobile crouch button: press to crouch, release to stand
       const crouchButton = document.getElementById('crouch-button');
-      crouchButton.addEventListener('mousedown', () => player.crouch(true));
+      crouchButton.addEventListener('mousedown', () => !isPausedForCurse && player.crouch(true));
       crouchButton.addEventListener('mouseup', () => player.crouch(false));
       crouchButton.addEventListener('mouseleave', () => player.crouch(false));
-      crouchButton.addEventListener('touchstart', (e) => { e.preventDefault(); player.crouch(true); });
+      crouchButton.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isPausedForCurse) player.crouch(true); });
       crouchButton.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
 
-      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver) player.jump(); });
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver && !isPausedForCurse) player.jump(); });
     }
 
     // =======================================================
@@ -1055,7 +1273,6 @@
         skinsList.appendChild(div);
         renderSkinPreview(skin.id);
       });
-      // Reflect golden hacker UI
       updateGoldenHackerButtonUI();
     }
 
@@ -1064,7 +1281,6 @@
       if (!canvas) return;
       const ctxP = canvas.getContext('2d');
       ctxP.clearRect(0, 0, canvas.width, canvas.height);
-
       const x = 15, y = 20, w = 20, h = 30;
 
       switch (skinId) {
@@ -1098,7 +1314,7 @@
           ctxP.strokeStyle = '#FFFFFF'; ctxP.strokeRect(x, y, w, h);
       }
 
-      // simple head
+      // Head
       ctxP.beginPath(); ctxP.arc(x + w/2, y - 5, 5, 0, Math.PI * 2);
       ctxP.strokeStyle = '#FFFFFF'; ctxP.stroke();
     }
@@ -1185,8 +1401,10 @@
     // =======================================================
     function startGame() {
       stopGame();
+      curseModal.style.display = 'none';
       gameOverModal.style.display = 'none';
       isGameOver = false;
+      isPausedForCurse = false;
       score = 0;
       obstacles = [];
       coins = [];
@@ -1195,7 +1413,7 @@
       isFalling = false;
       obstacleSpawnTimer = 0;
       coinSpawnTimer = 0;
-      currentSpeed = BASE_GAME_SPEED;
+      currentSpeed = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
 
       // Reset ability state
       jumpCount = 0;
@@ -1208,6 +1426,19 @@
         goldenHackerReady = true;
         goldenHackerCooldownRemaining = 0;
       }
+
+      // Reset curse timers for timed curses (per new run)
+      activeCurses = activeCurses.filter(c => !c.expiresAt); // keep permanents, drop timed on restart
+      curseFogActive = false;
+      curseCoinTaxActive = false;
+      curseSlipperyActive = false;
+      curseDoubleGravityActive = false;
+      curseSlowRecoverActive = false;
+      curseMagnetMalfunctionActive = false;
+      curseObstacleFrenzyActive = false;
+      curseTrapStormActive = false;
+      curseBlindBarActive = false;
+      coinDrainTimer = 0;
 
       updateHackerButtonUI();
       updateTimeButtonUI();
@@ -1232,6 +1463,7 @@
       lastTime = currentTime;
 
       if (isGameOver) { stopGame(); return; }
+      if (isPausedForCurse) { animationFrameId = requestAnimationFrame(gameLoop); return; }
 
       update(deltaTime);
       draw();
@@ -1239,17 +1471,27 @@
     }
 
     function update(deltaTime) {
-      // Internal score updates
+      // Score
       score += deltaTime / 16; // ~60 points/sec
       const uiScore = Math.floor(score / 10);
       scoreElement.textContent = uiScore;
 
-      // Track best level for leaderboard
+      // Track best level
       bestLevel = Math.max(bestLevel, uiScore);
 
-      // Speed ramp (faster to max)
+      // Trigger curse every 100 levels (once per threshold)
+      const nextThreshold = Math.floor(uiScore / 100) * 100;
+      if (uiScore > 0 && uiScore % 100 === 0 && nextThreshold !== lastCurseThresholdAwarded && !isPausedForCurse) {
+        // Pause game for curse selection
+        isPausedForCurse = true;
+        showCurseChoice();
+        return;
+      }
+
+      // Speed ramp (consider speed surge permanent)
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
-      const calculatedSpeed = BASE_GAME_SPEED + (MAX_GAME_SPEED_INCREASE * speedFactor);
+      const baseSpeedOffset = (curseSpeedSurgeActive ? 2 : 0);
+      const calculatedSpeed = (BASE_GAME_SPEED + baseSpeedOffset) + (MAX_GAME_SPEED_INCREASE * speedFactor);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
 
       // Cooldowns/effects
@@ -1274,34 +1516,50 @@
         updateGoldenHackerButtonUI();
       }
 
+      // Update curses timers and effects
+      updateCurses(deltaTime);
+
       // Player physics with dynamic gravity
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
       if (!isFalling) {
-        player.velocityY += getDynamicGravity();  // gravity scales with speed
+        player.velocityY += getDynamicGravity();  // gravity scales slowly
         player.y += player.velocityY;
 
+        // Slippery landing: add slight forward slide
         if (player.y >= groundY) {
           let fallingIntoHole = false;
           for (const hole of holes) {
             if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { fallingIntoHole = true; break; }
           }
           if (fallingIntoHole) { isFalling = true; player.velocityY = 0; }
-          else { player.y = groundY; player.velocityY = 0; jumpCount = 0; }
+          else {
+            player.y = groundY; player.velocityY = 0; jumpCount = 0;
+            if (curseSlipperyActive) {
+              player.slideVelocityX = 0.8; // small slide effect
+            }
+          }
+        }
+
+        // Apply slide gradually
+        if (player.slideVelocityX > 0) {
+          player.x += player.slideVelocityX;
+          player.slideVelocityX = Math.max(0, player.slideVelocityX - 0.05);
         }
       } else {
-        player.velocityY += getDynamicGravity(3); // heavier while falling into a hole
+        player.velocityY += getDynamicGravity(3);
         player.y += player.velocityY;
         if (player.y > canvas.height + 50) { gameOver(); return; }
       }
 
-      // Obstacle density ramp
+      // Obstacle density ramp (with frenzy curse)
       const initialRate = 100;
       const minRate = MIN_OBSTACLE_RATE;
       const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
       const rateReduction = (initialRate - minRate) * difficultyFactor;
       obstacleSpawnRate = initialRate - rateReduction;
+      if (curseObstacleFrenzyActive) obstacleSpawnRate = Math.max(minRate, obstacleSpawnRate / 2);
 
-      // Spawning: obstacles or holes
+      // Spawning
       obstacleSpawnTimer++;
       if (obstacleSpawnTimer >= obstacleSpawnRate) {
         if (Math.random() < 0.15) holes.push(new Hole());
@@ -1312,8 +1570,9 @@
         obstacleSpawnTimer = 0;
       }
 
-      // Traps: rare, start at UI score ≥ 250
-      if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < TRAP_SPAWN_PROBABILITY) {
+      // Traps: rare, start at UI score ≥ 250; increase rate with trap storm
+      const trapProb = TRAP_SPAWN_PROBABILITY * (curseTrapStormActive ? 3 : 1);
+      if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < trapProb) {
         traps.push(new Trap());
       }
 
@@ -1324,7 +1583,7 @@
         coinSpawnTimer = 0;
       }
 
-      // Magnet: zip instantly to player and auto-collect
+      // Magnet behavior: malfunction reverses zip direction
       if (magnetLevel > 0 && coins.length > 0) {
         const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
         const px = player.x + player.width / 2;
@@ -1338,7 +1597,6 @@
           const dy = py - cy;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          // Lv1: zip only if overhead-ish; Lv2: zip from anywhere within radius
           const isOverheadX = (coin.x + coin.size > player.x) && (coin.x < player.x + player.width);
           const isHigherY = coin.y < player.y + player.height / 2;
 
@@ -1347,17 +1605,22 @@
             : (distance <= magnetRadius && isOverheadX && isHigherY);
 
           if (shouldZip) {
-            // move coin instantly to player
-            coin.x += dx;
-            coin.y += dy;
-            // collect immediately with multiplier
-            let value = coin.baseValue;
-            if (magnetLevel === 1) value = MAGNET_UPGRADE.values[0]; // 2x
-            else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1]; // 3x
-            playerCoins += value;
-            coinCountElement.textContent = playerCoins;
-            coins.splice(i, 1);
-            persistUserData();
+            if (!curseMagnetMalfunctionActive) {
+              coin.x += dx;
+              coin.y += dy;
+              let value = coin.baseValue;
+              if (magnetLevel === 1) value = MAGNET_UPGRADE.values[0];
+              else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1];
+              if (curseCoinTaxActive) value = Math.max(0, Math.floor(value * 0.5));
+              playerCoins += value;
+              coinCountElement.textContent = playerCoins;
+              coins.splice(i, 1);
+              persistUserData();
+            } else {
+              // repel
+              coin.x -= dx * 0.6;
+              coin.y -= dy * 0.6;
+            }
           }
         }
       }
@@ -1388,7 +1651,6 @@
         const trap = traps[i];
         trap.update();
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
-
         if (!trap.isTriggered &&
             player.x + player.width > trap.x &&
             player.x < trap.x + trap.width &&
@@ -1398,7 +1660,7 @@
         }
       }
 
-      // Coins (standard collection when overlapping)
+      // Coins (standard overlap)
       for (let i = coins.length - 1; i >= 0; i--) {
         const coin = coins[i];
         coin.update();
@@ -1410,6 +1672,7 @@
           let value = coin.baseValue;
           if (magnetLevel === 1) value = MAGNET_UPGRADE.values[0];
           else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1];
+          if (curseCoinTaxActive) value = Math.max(0, Math.floor(value * 0.5));
           playerCoins += value;
           coinCountElement.textContent = playerCoins;
           coins.splice(i, 1);
@@ -1426,23 +1689,35 @@
       ctx.fillStyle = '#2d3748';
       ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
+      // Fog overlay if active
+      if (curseFogActive) {
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
       // Render order
       holes.forEach(hole => hole.draw());
       traps.forEach(trap => trap.draw());
       obstacles.forEach(obs => obs.draw());
       coins.forEach(coin => coin.draw());
       if (player) player.draw();
+
+      // Blind bar
+      if (curseBlindBarActive) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(blindBar.x, 0, blindBar.w, canvas.height);
+      }
     }
 
     function gameOver() {
       isGameOver = true;
+      curseModal.style.display = 'none';
       const finalScore = Math.floor(score / 10);
       finalScoreElement.textContent = finalScore;
       if (finalScore > highScore) {
         highScore = finalScore;
         highScoreElement.textContent = highScore;
       }
-      // Update bestLevel in-memory and persist
       bestLevel = Math.max(bestLevel, finalScore);
       persistUserData();
       gameOverModal.style.display = 'flex';
@@ -1468,18 +1743,12 @@
       window.addEventListener('touchend', () => player?.crouch(false));
     });
 
-    // =======================================================
-    // EXTENDED COMMENTS AND NOTES BLOCK
-    // (Kept for clarity and maintainability)
-    // =======================================================
-    /*
-      - Six skins with previews and escalating costs; Golden unlocks Golden Hacker.
-      - Leaderboard shows best level across users (localStorage).
-      - Gravity starts light and scales up with speed.
-      - Money Magnet zip collection for quick feedback.
-      - Hacker, Time Warp, and Golden Hacker abilities with cooldowns and UI states.
-      - Holes widen with score; rare traps after 250 UI score; air obstacles swoop late-game.
-    */
+    // Notes:
+    // - Gravity starts at 0.4 and increases slowly toward 1.0 (GRAVITY_SLOW_FACTOR).
+    // - Curse system pauses the game every 100 levels for a choice of 3 curses.
+    // - Some curses are timed, others are permanent (applied until game over).
+    // - Golden skin unlocks Golden Hacker (10s cooldown, golden obstacles, +2 coins).
+    // - Skins include previews; shop and leaderboard persist via localStorage.
   </script>
 </body>
 </html>
