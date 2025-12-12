@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stickman Jumper</title>
+  <title>Arcade Hero</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #1a1a2e; }
@@ -111,7 +111,7 @@
       <div id="curse-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
         <div class="bg-[#0f172a] p-6 md:p-8 rounded-xl shadow-2xl border-4 border-[#e94560] max-w-3xl w-full">
           <h3 class="text-3xl md:text-4xl font-extrabold mb-4 text-white">Choose your curse</h3>
-          <p class="text-sm md:text-base text-gray-300 mb-6">Every 100 levels, you must choose one curse. Some last for a duration, some are permanent.</p>
+          <p class="text-sm md:text-base text-gray-300 mb-6">Every 100 levels, pick one curse. Some last for a duration, some persist until game over.</p>
           <div id="curse-options" class="grid md:grid-cols-3 gap-4"></div>
           <div class="mt-6 flex justify-end">
             <button id="skip-curse-button" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled>Skip (disabled)</button>
@@ -307,7 +307,6 @@
       jumpLevel = userData.upgrades.jump;
       magnetLevel = userData.upgrades.magnet;
 
-      // Skins
       ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
       (userData.skins?.owned || []).forEach(id => { ownedSkins[id] = true; });
       equippedSkin = userData.skins?.equipped || 'default';
@@ -434,8 +433,8 @@
 
     // Gravity: start at 0.4 and increase slowly
     const BASE_GRAVITY_START = 0.4;
-    const MAX_GRAVITY = 1.0; // lower cap to keep late-game less punishing
-    const GRAVITY_SLOW_FACTOR = 1.5; // increases more slowly
+    const MAX_GRAVITY = 1.0;
+    const GRAVITY_SLOW_FACTOR = 1.5;
 
     const JUMP_VELOCITY = -12;
 
@@ -456,7 +455,7 @@
     let coins = [];
     let holes = [];
     let traps = [];
-    let score = 0;                 // internal score ticker
+    let score = 0;
     let currentSpeed = BASE_GAME_SPEED;
 
     let highScore = 0;
@@ -505,14 +504,14 @@
     let goldenHackerReady = true;
 
     // Trap rarity and threshold
-    const TRAP_SPAWN_PROBABILITY = 0.015; // rare spawn
-    const TRAP_MIN_UI_SCORE = 250;        // begin spawning traps at 250 UI score
+    const TRAP_SPAWN_PROBABILITY = 0.015;
+    const TRAP_MIN_UI_SCORE = 250;
 
-    // Magnet settings — zip mode uses radius from upgrade
-    const magnetForce = 0.025; // retained (not used directly in zip mode)
+    // Magnet settings (zip mode)
+    const magnetForce = 0.025;
 
     // =======================================================
-    // UPGRADES SETUP (UPDATED REQUIREMENTS)
+    // UPGRADES SETUP
     // =======================================================
     const TIME_UPGRADE = {
       costs: [12, 20, 35],
@@ -558,8 +557,8 @@
     const MAGNET_UPGRADE = {
       costs: [40, 80],
       highScoreRequirement: [300, 800],
-      values: [2, 3],         // 2x, 3x coin value multipliers
-      radii: [150, 300],      // attraction radius by level
+      values: [2, 3],
+      radii: [150, 300],
       maxLevel: 2,
       effect: (level) => {
         if (level === 0) return 'No magnet. Coins worth 1.';
@@ -572,7 +571,6 @@
     // =======================================================
     // CURSE SYSTEM
     // =======================================================
-    // Ratings: not so bad, bad, horrible, very horrible
     const CURSE_RATING_CLASS = {
       'Not so bad': 'badge badge-not',
       'Bad': 'badge badge-bad',
@@ -580,31 +578,27 @@
       'Very Horrible': 'badge badge-very'
     };
 
-    // Active curse state
-    let activeCurses = []; // [{id, name, rating, expiresAt(null if permanent)}]
-    let curseTimers = {};  // id -> remaining ms for timed curses
+    let activeCurses = [];
+    let curseTimers = {};
 
     // Effects toggles
     let curseFogActive = false;
     let curseCoinTaxActive = false;
-    let curseSlipperyActive = false;
+    let curseSlipActive = false;     // updated slip behavior (world speed burst)
+    let slipTimer = 0;
     let curseDoubleGravityActive = false;
     let curseSlowRecoverActive = false;
     let curseMagnetMalfunctionActive = false;
     let curseObstacleFrenzyActive = false;
     let curseTrapStormActive = false;
     let curseBlindBarActive = false;
-    let cursePermanentGravityBoost = 0;  // accumulates
+    let cursePermanentGravityBoost = 0;
     let curseCoinDrainActive = false;
     let curseSpeedSurgeActive = false;
 
-    // Blind bar settings
-    const blindBar = { x: 0, w: 80, h: 9999 };
-
-    // Coin drain timer
+    const blindBar = { x: 0, w: 80 };
     let coinDrainTimer = 0;
 
-    // Curse pool
     const CURSES = [
       // Not so bad
       { id: 'fog', name: 'Foggy Vision', rating: 'Not so bad', duration: 30000,
@@ -617,10 +611,10 @@
         apply: () => { curseCoinTaxActive = true; },
         cleanup: () => { curseCoinTaxActive = false; }
       },
-      { id: 'slippery', name: 'Slippery Feet', rating: 'Not so bad', duration: 20000,
-        description: 'Landing slides you slightly for 20s.',
-        apply: () => { curseSlipperyActive = true; },
-        cleanup: () => { curseSlipperyActive = false; }
+      { id: 'slippery', name: 'Slippery Feet', rating: 'Not so bad', duration: 2000,
+        description: 'The world speeds up briefly, like slipping.',
+        apply: () => { curseSlipActive = true; slipTimer = 2000; },
+        cleanup: () => { curseSlipActive = false; slipTimer = 0; }
       },
 
       // Bad
@@ -720,22 +714,13 @@
         expiresAt: curse.duration ? now + curse.duration : null
       });
       if (curse.duration) curseTimers[curse.id] = curse.duration;
-
-      // Update permanent values immediately
-      if (curse.id === 'speedSurge') {
-        // Increase base speed; keep max speed increase same so curve shifts up modestly
-        // We won't mutate constants; instead apply an offset in speed calc
-        // Marked via curseSpeedSurgeActive flag
-      }
-
       resumeAfterCurse();
     }
 
     function resumeAfterCurse() {
       curseModal.style.display = 'none';
       isPausedForCurse = false;
-      lastCurseThresholdAwarded = Math.floor((score/10) / 100) * 100; // record the 100s threshold
-      // Re-launch loop if it was stopped
+      lastCurseThresholdAwarded = Math.floor((score/10) / 100) * 100;
       if (!animationFrameId && currentScreen === 'game' && !isGameOver) {
         lastTime = 0;
         animationFrameId = requestAnimationFrame(gameLoop);
@@ -743,23 +728,19 @@
     }
 
     function updateCurses(deltaTime) {
-      if (activeCurses.length === 0) return;
+      if (activeCurses.length === 0 && !curseCoinDrainActive) return;
       const now = performance.now();
       for (let i = activeCurses.length - 1; i >= 0; i--) {
         const c = activeCurses[i];
         if (c.expiresAt && now >= c.expiresAt) {
-          // cleanup and remove
           const curseDef = CURSES.find(x => x.id === c.id);
           if (curseDef && curseDef.cleanup) curseDef.cleanup();
           delete curseTimers[c.id];
           activeCurses.splice(i, 1);
         } else if (c.expiresAt) {
-          // decrement timer
           curseTimers[c.id] = Math.max(0, curseTimers[c.id] - deltaTime);
         }
       }
-
-      // Coin drain ticking
       if (curseCoinDrainActive) {
         coinDrainTimer += deltaTime;
         if (coinDrainTimer >= 5000) {
@@ -770,6 +751,10 @@
             persistUserData();
           }
         }
+      }
+      if (curseSlipActive) {
+        slipTimer -= deltaTime;
+        if (slipTimer <= 0) { curseSlipActive = false; slipTimer = 0; }
       }
     }
 
@@ -801,12 +786,133 @@
     function getDynamicGravity(multiplier = 1) {
       const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
       let baseSpeedAdj = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
-      // Slow growth factor
       const speedFactor = Math.min((currentSpeed - baseSpeedAdj) / ((maxSpeed - baseSpeedAdj) * GRAVITY_SLOW_FACTOR), 1);
       const gravityBase = BASE_GRAVITY_START + cursePermanentGravityBoost;
       let gravity = gravityBase + (MAX_GRAVITY - gravityBase) * Math.max(0, speedFactor);
       if (curseDoubleGravityActive) gravity *= 2;
       return gravity * multiplier;
+    }
+
+    // =======================================================
+    // SKIN RENDER HELPERS
+    // =======================================================
+    const DEFAULT_GOLD = '#f4c542';       // sampled warm midtone from your gradient
+    const NINJA_BAND_RED = '#d81e1e';
+    const ALIEN_GREEN = '#00ff00';
+    const ROBOT_GRAY = '#8a8a8a';
+    const ROBOT_EYE_CYAN = '#00e1ff';
+    const PIRATE_BLACK = '#000000';
+    const PIRATE_STRIPE_RED = '#d81e1e';
+    const PIRATE_STRIPE_BROWN = '#7b3f00';
+    const SANTA_RED = '#ff0000';
+    const SANTA_WHITE = '#ffffff';
+    const GOLDEN_LINE = '#f4c542';
+
+    function drawStickmanLines(ctx, x, y, w, h, color, lineWidth=3) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      // Head
+      ctx.beginPath(); ctx.arc(x + w / 2, y + 5, 6, 0, Math.PI * 2); ctx.stroke();
+      // Body
+      const bodyTop = y + 12;
+      const bodyBottom = y + h - 10;
+      ctx.beginPath(); ctx.moveTo(x + w / 2, bodyTop); ctx.lineTo(x + w / 2, bodyBottom); ctx.stroke();
+      // Arms
+      ctx.beginPath(); ctx.moveTo(x, y + (h/2 - 5)); ctx.lineTo(x + w, y + (h/2 - 5)); ctx.stroke();
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2, bodyBottom); ctx.lineTo(x, y + h);
+      ctx.moveTo(x + w / 2, bodyBottom); ctx.lineTo(x + w, y + h);
+      ctx.stroke();
+    }
+
+    function drawNinja(ctx, x, y, w, h) {
+      // Body in black
+      drawStickmanLines(ctx, x, y, w, h, '#000000', 3.5);
+      // Red headband around head (two stripes) + flowing ribbon left side
+      const cx = x + w/2, cy = y + 5, r = 6;
+      ctx.strokeStyle = NINJA_BAND_RED; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI*0.15, Math.PI*1.85); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r+2, Math.PI*0.15, Math.PI*1.85); ctx.stroke();
+      // Knot + ribbon tail to the left
+      ctx.fillStyle = NINJA_BAND_RED;
+      ctx.beginPath(); ctx.arc(x + w/2 - r - 2, cy, 2, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = NINJA_BAND_RED; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x + w/2 - r - 2, cy);
+      ctx.quadraticCurveTo(x + w/2 - r - 12, cy - 6, x + w/2 - r - 18, cy - 2);
+      ctx.quadraticCurveTo(x + w/2 - r - 10, cy + 6, x + w/2 - r - 18, cy + 10);
+      ctx.stroke();
+    }
+
+    function drawAlien(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, ALIEN_GREEN, 3.5);
+    }
+
+    function drawRobot(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, ROBOT_GRAY, 3.5);
+      // Cyan eyes on head
+      const hx = x + w/2, hy = y + 5;
+      ctx.fillStyle = ROBOT_EYE_CYAN;
+      ctx.beginPath(); ctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+    }
+
+    function drawPirate(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, PIRATE_BLACK, 3.5);
+      // Hat: a simple brim and top above head
+      const cx = x + w/2, cy = y - 2;
+      ctx.fillStyle = PIRATE_BLACK;
+      ctx.fillRect(cx - 14, cy, 28, 4); // brim
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, cy);
+      ctx.quadraticCurveTo(cx, cy - 10, cx + 10, cy);
+      ctx.lineTo(cx + 10, cy + 8);
+      ctx.lineTo(cx - 10, cy + 8);
+      ctx.closePath();
+      ctx.fill();
+      // Torso stripes: red and brown vertical stripes
+      const bodyTop = y + 12, bodyBottom = y + h - 10;
+      ctx.strokeStyle = PIRATE_STRIPE_RED; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + w/2 - 5, bodyTop); ctx.lineTo(x + w/2 - 5, bodyBottom); ctx.stroke();
+      ctx.strokeStyle = PIRATE_STRIPE_BROWN;
+      ctx.beginPath(); ctx.moveTo(x + w/2 + 5, bodyTop); ctx.lineTo(x + w/2 + 5, bodyBottom); ctx.stroke();
+    }
+
+    function drawSanta(ctx, x, y, w, h) {
+      // Body lines in red
+      drawStickmanLines(ctx, x, y, w, h, SANTA_RED, 3.5);
+      // White cuffs on arms and legs
+      ctx.strokeStyle = SANTA_WHITE; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + 4, y + (h/2 - 5)); ctx.lineTo(x + 8, y + (h/2 - 5)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + w - 8, y + (h/2 - 5)); ctx.lineTo(x + w - 4, y + (h/2 - 5)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 6, y + h - 2); ctx.lineTo(x + 10, y + h - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + w - 10, y + h - 2); ctx.lineTo(x + w - 6, y + h - 2); ctx.stroke();
+      // White belt (mid-body)
+      const bodyTop = y + 12, bodyBottom = y + h - 10;
+      ctx.beginPath(); ctx.moveTo(x + w/2 - 9, (bodyTop+bodyBottom)/2); ctx.lineTo(x + w/2 + 9, (bodyTop+bodyBottom)/2); ctx.stroke();
+      // Santa hat (red with white trim & pom-pom)
+      const hx = x + w/2, hy = y - 2;
+      ctx.fillStyle = SANTA_RED;
+      ctx.beginPath();
+      ctx.moveTo(hx - 10, hy);
+      ctx.quadraticCurveTo(hx + 2, hy - 12, hx + 12, hy - 4);
+      ctx.lineTo(hx + 12, hy);
+      ctx.closePath(); ctx.fill();
+      // White trim
+      ctx.fillStyle = SANTA_WHITE;
+      ctx.fillRect(hx - 12, hy, 24, 3);
+      // Pom-pom
+      ctx.beginPath(); ctx.arc(hx + 12, hy - 4, 3, 0, Math.PI*2); ctx.fill();
+    }
+
+    function drawGolden(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, GOLDEN_LINE, 3.5);
+    }
+
+    function drawDefault(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, DEFAULT_GOLD, 3.5);
     }
 
     // =======================================================
@@ -821,14 +927,12 @@
         this.velocityY = 0;
         this.isCrouching = false;
         this.skin = equippedSkin;
-        this.slideVelocityX = 0; // for slippery curse
       }
       setSkin(skinName) { this.skin = skinName; }
       crouch(on) {
         this.isCrouching = on;
         const targetHeight = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
         if (curseSlowRecoverActive && !on) {
-          // delay recovery
           setTimeout(() => {
             this.height = targetHeight;
             this.y = canvas.height - GROUND_HEIGHT - this.height;
@@ -850,55 +954,15 @@
         }
       }
       draw() {
-        // Skin visuals
+        const x = this.x, y = this.y, w = this.width, h = this.height;
         switch (this.skin) {
-          case 'santa':
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(this.x, this.y, this.width, 5);
-            ctx.beginPath(); ctx.arc(this.x + this.width/2, this.y - 10, 6, 0, Math.PI*2);
-            ctx.fillStyle = '#ffffff'; ctx.fill();
-            break;
-          case 'ninja':
-            ctx.fillStyle = '#0b0b0b';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#444'; ctx.fillRect(this.x, this.y, this.width, 4);
-            break;
-          case 'robot':
-            ctx.fillStyle = '#8a8a8a';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#00e1ff'; ctx.fillRect(this.x + this.width/4, this.y + 4, this.width/2, 4);
-            break;
-          case 'pirate':
-            ctx.fillStyle = '#7b3f00';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#222'; ctx.fillRect(this.x, this.y, this.width, 5);
-            ctx.fillStyle = '#000'; ctx.fillRect(this.x + this.width - 6, this.y + 4, 6, 6);
-            break;
-          case 'alien':
-            ctx.fillStyle = '#2bdc73';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#a6ffb5'; ctx.fillRect(this.x + this.width/4, this.y, this.width/2, 3);
-            break;
-          case 'golden':
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = '#fff2a8'; ctx.fillRect(this.x, this.y, this.width, 4);
-            break;
-          default:
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + 5, 5, 0, Math.PI * 2); ctx.stroke();
-            const bodyTop = this.y + 10;
-            const bodyBottom = this.isCrouching ? this.y + 20 : this.y + 25;
-            ctx.beginPath(); ctx.moveTo(this.x + this.width / 2, bodyTop); ctx.lineTo(this.x + this.width / 2, bodyBottom); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(this.x, this.y + (this.isCrouching ? 20 : 15)); ctx.lineTo(this.x + this.width, this.y + (this.isCrouching ? 20 : 15)); ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x, this.y + this.height);
-            ctx.moveTo(this.x + this.width / 2, bodyBottom); ctx.lineTo(this.x + this.width, this.y + this.height);
-            ctx.stroke();
+          case 'ninja':  drawNinja(ctx, x, y, w, h); break;
+          case 'alien':  drawAlien(ctx, x, y, w, h); break;
+          case 'robot':  drawRobot(ctx, x, y, w, h); break;
+          case 'pirate': drawPirate(ctx, x, y, w, h); break;
+          case 'santa':  drawSanta(ctx, x, y, w, h); break;
+          case 'golden': drawGolden(ctx, x, y, w, h); break;
+          default:       drawDefault(ctx, x, y, w, h);
         }
       }
     }
@@ -909,13 +973,12 @@
         this.x = canvas.width;
         this.color = '#FFD700';
         this.baseValue = 1;
-
         const level = Math.floor(Math.random() * 3);
         if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
         else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
         else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
       }
-      update() { this.x -= currentSpeed; }
+      update(speed) { this.x -= speed; }
       draw() {
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -940,11 +1003,11 @@
           this.width = 40 + Math.random() * 30;
           this.x = canvas.width;
           this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
-          this.vy = 0.3; // swoop speed (air obstacles descend after late game)
+          this.vy = 0.3;
         }
       }
-      update() {
-        this.x -= currentSpeed;
+      update(speed) {
+        this.x -= speed;
         if (this.type === 'air' && Math.floor(score / 10) >= 250) {
           this.y += this.vy;
         }
@@ -973,7 +1036,7 @@
         this.isBypassed = false;
         this.color = '#16213e';
       }
-      update() { this.x -= currentSpeed; }
+      update(speed) { this.x -= speed; }
       draw() {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -997,8 +1060,8 @@
         this.tintAlpha = 0.08;
         this.animationProgress = 0;
       }
-      update() {
-        this.x -= currentSpeed;
+      update(speed) {
+        this.x -= speed;
         if (this.isTriggered && this.animationProgress < 1) {
           this.animationProgress += 0.06;
         }
@@ -1245,7 +1308,7 @@
       if (key === 'magnet') magnetLevel = level;
     }
 
-    // Skins UI (dynamic with previews)
+    // Skins UI (with previews)
     function updateSkinsUI() {
       const skinsList = document.getElementById('skins-list');
       skinsList.innerHTML = '';
@@ -1257,7 +1320,7 @@
 
         div.innerHTML = `
           <div class="flex items-center gap-4">
-            <canvas id="preview-${skin.id}" width="50" height="70" class="skin-preview"></canvas>
+            <canvas id="preview-${skin.id}" width="60" height="80" class="skin-preview"></canvas>
             <div>
               <p class="text-2xl font-bold">${skin.name}</p>
               <p class="text-lg text-gray-300">Cost: ${skin.cost} Coins</p>
@@ -1277,46 +1340,89 @@
     }
 
     function renderSkinPreview(skinId) {
-      const canvas = document.getElementById(`preview-${skinId}`);
-      if (!canvas) return;
-      const ctxP = canvas.getContext('2d');
-      ctxP.clearRect(0, 0, canvas.width, canvas.height);
-      const x = 15, y = 20, w = 20, h = 30;
+      const canvasP = document.getElementById(`preview-${skinId}`);
+      if (!canvasP) return;
+      const pctx = canvasP.getContext('2d');
+      pctx.clearRect(0, 0, canvasP.width, canvasP.height);
+      const x = 18, y = 20, w = 24, h = 36;
+
+      const drawLines = (color) => drawStickmanLines(pctx, x, y, w, h, color, 3);
 
       switch (skinId) {
-        case 'santa':
-          ctxP.fillStyle = '#ff0000'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#ffffff'; ctxP.fillRect(x, y, w, 5);
-          ctxP.beginPath(); ctxP.arc(x + w/2, y - 8, 6, 0, Math.PI*2); ctxP.fillStyle = '#ffffff'; ctxP.fill();
-          break;
         case 'ninja':
-          ctxP.fillStyle = '#0b0b0b'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#444'; ctxP.fillRect(x, y, w, 4);
-          break;
-        case 'robot':
-          ctxP.fillStyle = '#8a8a8a'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#00e1ff'; ctxP.fillRect(x + w/4, y + 6, w/2, 4);
-          break;
-        case 'pirate':
-          ctxP.fillStyle = '#7b3f00'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#222'; ctxP.fillRect(x, y, w, 5);
-          ctxP.fillStyle = '#000'; ctxP.fillRect(x + w - 6, y + 6, 6, 6);
+          drawLines('#000000');
+          // headband
+          const cx = x + w/2, cy = y + 5, r = 6;
+          pctx.strokeStyle = NINJA_BAND_RED; pctx.lineWidth = 2;
+          pctx.beginPath(); pctx.arc(cx, cy, r, Math.PI*0.15, Math.PI*1.85); pctx.stroke();
+          pctx.beginPath(); pctx.arc(cx, cy, r+2, Math.PI*0.15, Math.PI*1.85); pctx.stroke();
+          pctx.fillStyle = NINJA_BAND_RED; pctx.beginPath(); pctx.arc(x + w/2 - r - 2, cy, 2, 0, Math.PI*2); pctx.fill();
+          pctx.strokeStyle = NINJA_BAND_RED; pctx.beginPath();
+          pctx.moveTo(x + w/2 - r - 2, cy);
+          pctx.quadraticCurveTo(x + w/2 - r - 12, cy - 6, x + w/2 - r - 18, cy - 2);
+          pctx.quadraticCurveTo(x + w/2 - r - 10, cy + 6, x + w/2 - r - 18, cy + 10);
+          pctx.stroke();
           break;
         case 'alien':
-          ctxP.fillStyle = '#2bdc73'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#a6ffb5'; ctxP.fillRect(x + w/4, y, w/2, 3);
+          drawLines(ALIEN_GREEN);
+          break;
+        case 'robot':
+          drawLines(ROBOT_GRAY);
+          // eyes
+          const hx = x + w/2, hy = y + 5;
+          pctx.fillStyle = ROBOT_EYE_CYAN;
+          pctx.beginPath(); pctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); pctx.fill();
+          pctx.beginPath(); pctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); pctx.fill();
+          break;
+        case 'pirate':
+          drawLines(PIRATE_BLACK);
+          // hat
+          const px = x + w/2, py = y - 2;
+          pctx.fillStyle = PIRATE_BLACK;
+          pctx.fillRect(px - 14, py, 28, 4);
+          pctx.beginPath();
+          pctx.moveTo(px - 10, py);
+          pctx.quadraticCurveTo(px, py - 10, px + 10, py);
+          pctx.lineTo(px + 10, py + 8);
+          pctx.lineTo(px - 10, py + 8);
+          pctx.closePath(); pctx.fill();
+          // stripes
+          const bodyTop = y + 12, bodyBottom = y + h - 10;
+          pctx.strokeStyle = PIRATE_STRIPE_RED; pctx.lineWidth = 3;
+          pctx.beginPath(); pctx.moveTo(x + w/2 - 5, bodyTop); pctx.lineTo(x + w/2 - 5, bodyBottom); pctx.stroke();
+          pctx.strokeStyle = PIRATE_STRIPE_BROWN;
+          pctx.beginPath(); pctx.moveTo(x + w/2 + 5, bodyTop); pctx.lineTo(x + w/2 + 5, bodyBottom); pctx.stroke();
+          break;
+        case 'santa':
+          drawLines(SANTA_RED);
+          // cuffs and belt
+          pctx.strokeStyle = SANTA_WHITE; pctx.lineWidth = 3;
+          pctx.beginPath(); pctx.moveTo(x + 4, y + (h/2 - 5)); pctx.lineTo(x + 8, y + (h/2 - 5)); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(x + w - 8, y + (h/2 - 5)); pctx.lineTo(x + w - 4, y + (h/2 - 5)); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(x + 6, y + h - 2); pctx.lineTo(x + 10, y + h - 2); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(x + w - 10, y + h - 2); pctx.lineTo(x + w - 6, y + h - 2); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(x + w/2 - 9, y + h/2); pctx.lineTo(x + w/2 + 9, y + h/2); pctx.stroke();
+          // hat
+          const shx = x + w/2, shy = y - 2;
+          pctx.fillStyle = SANTA_RED;
+          pctx.beginPath();
+          pctx.moveTo(shx - 10, shy);
+          pctx.quadraticCurveTo(shx + 2, shy - 12, shx + 12, shy - 4);
+          pctx.lineTo(shx + 12, shy);
+          pctx.closePath(); pctx.fill();
+          pctx.fillStyle = SANTA_WHITE; pctx.fillRect(shx - 12, shy, 24, 3);
+          pctx.beginPath(); pctx.arc(shx + 12, shy - 4, 3, 0, Math.PI*2); pctx.fill();
           break;
         case 'golden':
-          ctxP.fillStyle = '#FFD700'; ctxP.fillRect(x, y, w, h);
-          ctxP.fillStyle = '#fff2a8'; ctxP.fillRect(x, y, w, 4);
+          drawLines(GOLDEN_LINE);
           break;
         default:
-          ctxP.strokeStyle = '#FFFFFF'; ctxP.strokeRect(x, y, w, h);
+          drawLines(DEFAULT_GOLD);
       }
-
-      // Head
-      ctxP.beginPath(); ctxP.arc(x + w/2, y - 5, 5, 0, Math.PI * 2);
-      ctxP.strokeStyle = '#FFFFFF'; ctxP.stroke();
+      // label baseline (optional subtle floor)
+      pctx.strokeStyle = '#1f2937';
+      pctx.lineWidth = 1;
+      pctx.beginPath(); pctx.moveTo(8, y + h + 4); pctx.lineTo(canvasP.width - 8, y + h + 4); pctx.stroke();
     }
 
     function buySkin(skinId) {
@@ -1427,11 +1533,11 @@
         goldenHackerCooldownRemaining = 0;
       }
 
-      // Reset curse timers for timed curses (per new run)
-      activeCurses = activeCurses.filter(c => !c.expiresAt); // keep permanents, drop timed on restart
+      // Reset timed curses on new run
+      activeCurses = activeCurses.filter(c => !c.expiresAt);
       curseFogActive = false;
       curseCoinTaxActive = false;
-      curseSlipperyActive = false;
+      curseSlipActive = false; slipTimer = 0;
       curseDoubleGravityActive = false;
       curseSlowRecoverActive = false;
       curseMagnetMalfunctionActive = false;
@@ -1482,7 +1588,6 @@
       // Trigger curse every 100 levels (once per threshold)
       const nextThreshold = Math.floor(uiScore / 100) * 100;
       if (uiScore > 0 && uiScore % 100 === 0 && nextThreshold !== lastCurseThresholdAwarded && !isPausedForCurse) {
-        // Pause game for curse selection
         isPausedForCurse = true;
         showCurseChoice();
         return;
@@ -1492,6 +1597,9 @@
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const baseSpeedOffset = (curseSpeedSurgeActive ? 2 : 0);
       const calculatedSpeed = (BASE_GAME_SPEED + baseSpeedOffset) + (MAX_GAME_SPEED_INCREASE * speedFactor);
+
+      // Slip burst: temporarily boost world speed without moving player
+      const effectiveSpeed = (timeEffectRemaining <= 0 ? calculatedSpeed : currentSpeed) * (curseSlipActive ? 1.5 : 1.0);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
 
       // Cooldowns/effects
@@ -1516,34 +1624,20 @@
         updateGoldenHackerButtonUI();
       }
 
-      // Update curses timers and effects
       updateCurses(deltaTime);
 
       // Player physics with dynamic gravity
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
       if (!isFalling) {
-        player.velocityY += getDynamicGravity();  // gravity scales slowly
+        player.velocityY += getDynamicGravity();
         player.y += player.velocityY;
-
-        // Slippery landing: add slight forward slide
         if (player.y >= groundY) {
           let fallingIntoHole = false;
           for (const hole of holes) {
             if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { fallingIntoHole = true; break; }
           }
           if (fallingIntoHole) { isFalling = true; player.velocityY = 0; }
-          else {
-            player.y = groundY; player.velocityY = 0; jumpCount = 0;
-            if (curseSlipperyActive) {
-              player.slideVelocityX = 0.8; // small slide effect
-            }
-          }
-        }
-
-        // Apply slide gradually
-        if (player.slideVelocityX > 0) {
-          player.x += player.slideVelocityX;
-          player.slideVelocityX = Math.max(0, player.slideVelocityX - 0.05);
+          else { player.y = groundY; player.velocityY = 0; jumpCount = 0; }
         }
       } else {
         player.velocityY += getDynamicGravity(3);
@@ -1617,7 +1711,6 @@
               coins.splice(i, 1);
               persistUserData();
             } else {
-              // repel
               coin.x -= dx * 0.6;
               coin.y -= dy * 0.6;
             }
@@ -1625,10 +1718,10 @@
         }
       }
 
-      // Obstacles and collisions
+      // Update world objects using effectiveSpeed (player stays in place)
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
-        obs.update();
+        obs.update(effectiveSpeed);
         if (obs.x + obs.width < 0) { obstacles.splice(i, 1); continue; }
         if (obs.isBypassed) continue;
         if (player.x < obs.x + obs.width &&
@@ -1639,17 +1732,15 @@
         }
       }
 
-      // Holes
       for (let i = holes.length - 1; i >= 0; i--) {
         const hole = holes[i];
-        hole.update();
+        hole.update(effectiveSpeed);
         if (hole.x + hole.width < 0) holes.splice(i, 1);
       }
 
-      // Traps — snap shut on contact (instant game over)
       for (let i = traps.length - 1; i >= 0; i--) {
         const trap = traps[i];
-        trap.update();
+        trap.update(effectiveSpeed);
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
         if (!trap.isTriggered &&
             player.x + player.width > trap.x &&
@@ -1660,11 +1751,9 @@
         }
       }
 
-      // Coins (standard overlap)
       for (let i = coins.length - 1; i >= 0; i--) {
         const coin = coins[i];
-        coin.update();
-
+        coin.update(effectiveSpeed);
         if (player.x < coin.x + coin.size &&
             player.x + player.width > coin.x &&
             player.y < coin.y + coin.size &&
@@ -1745,10 +1834,10 @@
 
     // Notes:
     // - Gravity starts at 0.4 and increases slowly toward 1.0 (GRAVITY_SLOW_FACTOR).
-    // - Curse system pauses the game every 100 levels for a choice of 3 curses.
-    // - Some curses are timed, others are permanent (applied until game over).
-    // - Golden skin unlocks Golden Hacker (10s cooldown, golden obstacles, +2 coins).
-    // - Skins include previews; shop and leaderboard persist via localStorage.
+    // - Slippery curse: brief world-speed burst, player stays fixed (consistent jump spot).
+    // - Skins match your references: Ninja, Alien, Robot, Pirate, Santa, Golden, plus default in gold.
+    // - Curse system triggers every 100 levels; mix of timed and permanent curses.
+    // - Golden skin unlocks Golden Hacker.
   </script>
 </body>
 </html>
