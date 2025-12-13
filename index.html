@@ -24,6 +24,7 @@
     .badge-bad { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b55; }
     .badge-horrible { background: #ef444422; color: #ef4444; border: 1px solid #ef444455; }
     .badge-very { background: #7c3aed22; color: #7c3aed; border: 1px solid #7c3aed55; }
+    .btn-sm { padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
@@ -194,6 +195,22 @@
           </div>
         </div>
 
+        <!-- Curse Bender -->
+        <div class="shop-card p-6 border-2 border-[#1c305c]">
+          <h3 class="text-3xl font-bold mb-4 text-pink-400">Curse Bender (Passive)</h3>
+          <div class="bg-[#203463] p-4 rounded-lg">
+            <p class="text-2xl font-bold">Curse Filtering</p>
+            <p class="text-lg text-gray-300 mb-2">Block entire categories of curses from appearing.</p>
+            <p class="text-lg">Level: <span id="curseBender-level" class="font-bold text-green-400">0</span></p>
+            <p class="text-sm mt-1" id="curseBender-effect">Effect: No curse protection.</p>
+            <p class="text-sm mt-2 font-semibold text-red-300" id="curseBender-req"></p>
+          </div>
+          <div class="flex justify-between items-center mt-4">
+            <p id="curseBender-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
+            <button id="buy-curseBender-button" onclick="buyUpgrade('curseBender')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
+          </div>
+        </div>
+
         <!-- Skins -->
         <div class="shop-card p-6 border-2 border-[#1c305c]">
           <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
@@ -206,7 +223,7 @@
 
     <!-- LEADERBOARD SCREEN -->
     <div id="leaderboard-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
-      <h2 class="text-5xl font-bold text-[#e94560] mb-8">Leaderboard</h2>
+      <h2 id="leaderboard-title" class="text-5xl font-bold text-[#e94560] mb-8 cursor-pointer">Leaderboard</h2>
       <p class="text-lg mb-6 text-center max-w-lg">Most levels reached (best score milestones) across all users.</p>
       <table class="w-full max-w-2xl text-left border-collapse">
         <thead class="table-header">
@@ -219,6 +236,28 @@
         <tbody id="leaderboard-body" class="text-white"></tbody>
       </table>
       <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg mt-8">← Back to Menu</button>
+    </div>
+
+    <!-- ADMIN SCREEN -->
+    <div id="admin-panel" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
+      <h2 class="text-5xl font-bold text-green-400 mb-2">Admin Panel</h2>
+      <p class="text-sm text-gray-300 mb-6">Manage users: delete accounts, grant coins, change scores, lock or unlock accounts.</p>
+      <table class="w-full max-w-4xl text-left border-collapse">
+        <thead class="table-header">
+          <tr>
+            <th class="p-3">Username</th>
+            <th class="p-3">Coins</th>
+            <th class="p-3">High Score</th>
+            <th class="p-3">Locked</th>
+            <th class="p-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="admin-users-body" class="text-white"></tbody>
+      </table>
+      <div class="mt-8 flex gap-3">
+        <button onclick="goToScreen('leaderboard')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg">← Back to Leaderboard</button>
+        <button onclick="updateAdminUI()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">Refresh</button>
+      </div>
     </div>
   </div>
 
@@ -257,9 +296,10 @@
         coins: 0,
         highScore: 0,
         bestLevel: 0,
-        upgrades: { time:0, hacker:0, jump:0, magnet:0 },
+        upgrades: { time:0, hacker:0, jump:0, magnet:0, curseBender:0 },
         skins: { owned:['default'], equipped:'default' },
-        goldenHackerUnlocked: false
+        goldenHackerUnlocked: false,
+        locked: false
       };
       saveUserData(username, newUser);
       alert("Account created! Please login.");
@@ -269,6 +309,7 @@
       const password = document.getElementById('password-input').value.trim();
       const userData = getUserData(username);
       if (!userData) { alert("No account found. Please create one."); return; }
+      if (userData.locked) { alert("Your account is locked."); return; }
       if (userData.password !== password) { alert("Incorrect password."); return; }
       currentUser = username;
       loadUserData(userData);
@@ -289,6 +330,7 @@
       hackerLevel = 0;
       jumpLevel = 0;
       magnetLevel = 0;
+      curseBenderLevel = 0;
       ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
       equippedSkin = 'default';
       goldenHackerUnlocked = false;
@@ -302,10 +344,11 @@
       playerCoins = userData.coins;
       highScore = userData.highScore || 0;
       bestLevel = userData.bestLevel || 0;
-      timeLevel = userData.upgrades.time;
-      hackerLevel = userData.upgrades.hacker;
-      jumpLevel = userData.upgrades.jump;
-      magnetLevel = userData.upgrades.magnet;
+      timeLevel = userData.upgrades.time || 0;
+      hackerLevel = userData.upgrades.hacker || 0;
+      jumpLevel = userData.upgrades.jump || 0;
+      magnetLevel = userData.upgrades.magnet || 0;
+      curseBenderLevel = userData.upgrades.curseBender || 0;
 
       ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
       (userData.skins?.owned || []).forEach(id => { ownedSkins[id] = true; });
@@ -324,9 +367,10 @@
         coins: playerCoins,
         highScore: highScore,
         bestLevel: Math.max(existing?.bestLevel || 0, bestLevel),
-        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel },
+        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel, curseBender: curseBenderLevel },
         skins: { owned: ownedList, equipped: equippedSkin },
-        goldenHackerUnlocked
+        goldenHackerUnlocked,
+        locked: existing?.locked || false
       };
       saveUserData(currentUser, userData);
     }
@@ -368,6 +412,96 @@
       });
     }
 
+    // Admin unlock via leaderboard title
+    const leaderboardTitle = document.getElementById('leaderboard-title');
+    leaderboardTitle.addEventListener('click', () => {
+      const code = prompt("Enter access code:");
+      if (code && code.toLowerCase() === "stego") {
+        goToScreen('admin');
+        updateAdminUI();
+      } else {
+        alert("Incorrect code.");
+      }
+    });
+
+    // =======================================================
+    // ADMIN PANEL LOGIC
+    // =======================================================
+    function updateAdminUI() {
+      const tbody = document.getElementById('admin-users-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const users = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('stickmanUser_')) {
+          const data = JSON.parse(localStorage.getItem(key)) || {};
+          const username = key.replace('stickmanUser_', '');
+          users.push({ username, data });
+        }
+      }
+      users.sort((a, b) => a.username.localeCompare(b.username));
+      users.forEach(({ username, data }) => {
+        const tr = document.createElement('tr');
+        tr.className = 'table-row';
+        tr.innerHTML = `
+          <td class="p-3">${username}</td>
+          <td class="p-3">${data.coins || 0}</td>
+          <td class="p-3">${data.highScore || 0}</td>
+          <td class="p-3">${data.locked ? '<span class="text-red-400 font-semibold">Yes</span>' : '<span class="text-green-400 font-semibold">No</span>'}</td>
+          <td class="p-3 space-x-2">
+            <button class="btn-sm bg-red-600 hover:bg-red-700" onclick="adminDeleteUser('${username}')">Delete</button>
+            <button class="btn-sm bg-yellow-600 hover:bg-yellow-700" onclick="adminGrantCoins('${username}', ${data.coins || 0})">Grant Coins</button>
+            <button class="btn-sm bg-blue-600 hover:bg-blue-700" onclick="adminChangeScore('${username}', ${data.highScore || 0})">Change Score</button>
+            <button class="btn-sm bg-gray-600 hover:bg-gray-700" onclick="adminToggleLock('${username}', ${data.locked ? 'true' : 'false'})">${data.locked ? 'Unlock' : 'Lock'}</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function adminDeleteUser(username) {
+      if (!confirm(`Delete account "${username}"? This cannot be undone.`)) return;
+      localStorage.removeItem(`stickmanUser_${username}`);
+      if (currentUser === username) { currentUser = null; updateUserStatus(); }
+      updateAdminUI();
+      updateLeaderboardUI();
+    }
+    function adminGrantCoins(username, currentCoins) {
+      const input = prompt(`Current coins: ${currentCoins}\nHow many coins to grant? (can be negative)`);
+      if (input === null) return;
+      const amount = parseInt(input, 10);
+      if (isNaN(amount)) { alert('Invalid amount.'); return; }
+      const data = getUserData(username);
+      data.coins = Math.max(0, (data.coins || 0) + amount);
+      saveUserData(username, data);
+      if (currentUser === username) { playerCoins = data.coins; coinCountElement.textContent = playerCoins; }
+      updateAdminUI();
+    }
+    function adminChangeScore(username, currentScore) {
+      const input = prompt(`Current high score: ${currentScore}\nEnter new high score:`);
+      if (input === null) return;
+      const newScore = parseInt(input, 10);
+      if (isNaN(newScore) || newScore < 0) { alert('Invalid score.'); return; }
+      const data = getUserData(username);
+      data.highScore = newScore;
+      data.bestLevel = Math.max(data.bestLevel || 0, newScore);
+      saveUserData(username, data);
+      if (currentUser === username) { highScore = newScore; highScoreElement.textContent = highScore; }
+      updateAdminUI();
+      updateLeaderboardUI();
+    }
+    function adminToggleLock(username, isLocked) {
+      const data = getUserData(username);
+      data.locked = !isLocked;
+      saveUserData(username, data);
+      if (currentUser === username && data.locked) {
+        alert("Your account has been locked by admin. You will be logged out.");
+        logoutAccount();
+      }
+      updateAdminUI();
+    }
+
     // =======================================================
     // NAVIGATION
     // =======================================================
@@ -380,7 +514,8 @@
       menu: document.getElementById('menu-screen'),
       game: document.getElementById('game-screen'),
       shop: document.getElementById('shop-screen'),
-      leaderboard: document.getElementById('leaderboard-screen')
+      leaderboard: document.getElementById('leaderboard-screen'),
+      admin: document.getElementById('admin-panel')
     };
     const gameOverModal = document.getElementById('game-over-modal');
     const curseModal = document.getElementById('curse-modal');
@@ -393,6 +528,7 @@
       }
       if (currentScreen === targetScreen) {
         if (targetScreen === 'leaderboard') updateLeaderboardUI();
+        if (targetScreen === 'admin') updateAdminUI();
         return;
       }
 
@@ -411,6 +547,8 @@
           updateSkinsUI();
         } else if (targetScreen === 'leaderboard') {
           updateLeaderboardUI();
+        } else if (targetScreen === 'admin') {
+          updateAdminUI();
         }
       } else {
         console.error(`Unknown screen: ${targetScreen}`);
@@ -431,14 +569,12 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Gravity: start at 0.4 and increase slowly
     const BASE_GRAVITY_START = 0.4;
     const MAX_GRAVITY = 1.0;
     const GRAVITY_SLOW_FACTOR = 1.5;
 
     const JUMP_VELOCITY = -12;
 
-    // Speed scaling (ramps to max by 250 UI score)
     const BASE_GAME_SPEED = 4.0;
     const MAX_GAME_SPEED_INCREASE = 8.0;
     const MAX_SCORE_FOR_SPEED = 250;
@@ -466,6 +602,7 @@
     let hackerLevel = 0;
     let jumpLevel = 0;
     let magnetLevel = 0;
+    let curseBenderLevel = 0;
 
     let jumpCount = 0;
     let isFalling = false;
@@ -485,7 +622,6 @@
     let coinSpawnTimer = 0;
     const COIN_SPAWN_RATE = 350;
 
-    // Skins
     const SKINS = [
       { id: 'santa',  name: 'Santa Skin',  cost: 5 },
       { id: 'ninja',  name: 'Ninja Skin',  cost: 10 },
@@ -497,17 +633,14 @@
     let ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
     let equippedSkin = 'default';
 
-    // Golden Hacker special upgrade unlocked with golden skin
     const GOLDEN_HACKER_UPGRADE = { cooldown: 10000 };
     let goldenHackerUnlocked = false;
     let goldenHackerCooldownRemaining = 0;
     let goldenHackerReady = true;
 
-    // Trap rarity and threshold
     const TRAP_SPAWN_PROBABILITY = 0.015;
     const TRAP_MIN_UI_SCORE = 250;
 
-    // Magnet settings (zip mode)
     const magnetForce = 0.025;
 
     // =======================================================
@@ -566,7 +699,20 @@
         if (level === 2) return 'Strong magnet. Coins worth 3x.';
       }
     };
-    const UPGRADES = { time: TIME_UPGRADE, hacker: HACKER_UPGRADE, jump: JUMP_UPGRADE, magnet: MAGNET_UPGRADE };
+
+    const CURSE_BENDER_UPGRADE = {
+      costs: [50, 100, 150],
+      highScoreRequirement: [200, 400, 600],
+      maxLevel: 3,
+      effect: (level) => {
+        if (level === 0) return 'No curse protection.';
+        if (level === 1) return 'Blocks Very Horrible curses.';
+        if (level === 2) return 'Blocks Horrible curses.';
+        if (level === 3) return 'Blocks Bad curses.';
+      }
+    };
+
+    const UPGRADES = { time: TIME_UPGRADE, hacker: HACKER_UPGRADE, jump: JUMP_UPGRADE, magnet: MAGNET_UPGRADE, curseBender: CURSE_BENDER_UPGRADE };
 
     // =======================================================
     // CURSE SYSTEM
@@ -581,10 +727,9 @@
     let activeCurses = [];
     let curseTimers = {};
 
-    // Effects toggles
     let curseFogActive = false;
     let curseCoinTaxActive = false;
-    let curseSlipActive = false;     // updated slip behavior (world speed burst)
+    let curseSlipActive = false;     // world speed burst
     let slipTimer = 0;
     let curseDoubleGravityActive = false;
     let curseSlowRecoverActive = false;
@@ -670,12 +815,27 @@
     ];
 
     function pickRandomCurses(count = 3) {
-      const pool = [...CURSES];
+      // base pool
+      let pool = [...CURSES];
+      // apply Curse Bender filter
+      if (curseBenderLevel >= 1) pool = pool.filter(c => c.rating !== 'Very Horrible');
+      if (curseBenderLevel >= 2) pool = pool.filter(c => c.rating !== 'Horrible');
+      if (curseBenderLevel >= 3) pool = pool.filter(c => c.rating !== 'Bad');
+
       const picks = [];
       for (let i = 0; i < count && pool.length > 0; i++) {
         const idx = Math.floor(Math.random() * pool.length);
         picks.push(pool[idx]);
         pool.splice(idx, 1);
+      }
+      // if filtering made pool too small, fallback to safe "Not so bad" re-adds
+      if (picks.length < count) {
+        const safePool = CURSES.filter(c => c.rating === 'Not so bad');
+        while (picks.length < count && safePool.length > 0) {
+          const idx2 = Math.floor(Math.random() * safePool.length);
+          picks.push(safePool[idx2]);
+          safePool.splice(idx2, 1);
+        }
       }
       return picks;
     }
@@ -707,6 +867,7 @@
     }
 
     function applyCurseAndResume(curse) {
+      // apply effect
       curse.apply();
       const now = performance.now();
       activeCurses.push({
@@ -714,6 +875,15 @@
         expiresAt: curse.duration ? now + curse.duration : null
       });
       if (curse.duration) curseTimers[curse.id] = curse.duration;
+
+      // CLEAR ALL WORLD OBJECTS immediately after choosing a curse
+      obstacles = [];
+      holes = [];
+      traps = [];
+      coins = [];
+      obstacleSpawnTimer = 0;
+      coinSpawnTimer = 0;
+
       resumeAfterCurse();
     }
 
@@ -728,7 +898,7 @@
     }
 
     function updateCurses(deltaTime) {
-      if (activeCurses.length === 0 && !curseCoinDrainActive) return;
+      if (activeCurses.length === 0 && !curseCoinDrainActive && !curseSlipActive) return;
       const now = performance.now();
       for (let i = activeCurses.length - 1; i >= 0; i--) {
         const c = activeCurses[i];
@@ -796,7 +966,7 @@
     // =======================================================
     // SKIN RENDER HELPERS
     // =======================================================
-    const DEFAULT_GOLD = '#f4c542';       // sampled warm midtone from your gradient
+    const DEFAULT_GOLD = '#f4c542';
     const NINJA_BAND_RED = '#d81e1e';
     const ALIEN_GREEN = '#00ff00';
     const ROBOT_GRAY = '#8a8a8a';
@@ -828,14 +998,11 @@
     }
 
     function drawNinja(ctx, x, y, w, h) {
-      // Body in black
       drawStickmanLines(ctx, x, y, w, h, '#000000', 3.5);
-      // Red headband around head (two stripes) + flowing ribbon left side
       const cx = x + w/2, cy = y + 5, r = 6;
       ctx.strokeStyle = NINJA_BAND_RED; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI*0.15, Math.PI*1.85); ctx.stroke();
       ctx.beginPath(); ctx.arc(cx, cy, r+2, Math.PI*0.15, Math.PI*1.85); ctx.stroke();
-      // Knot + ribbon tail to the left
       ctx.fillStyle = NINJA_BAND_RED;
       ctx.beginPath(); ctx.arc(x + w/2 - r - 2, cy, 2, 0, Math.PI*2); ctx.fill();
       ctx.strokeStyle = NINJA_BAND_RED; ctx.lineWidth = 2.5;
@@ -845,54 +1012,38 @@
       ctx.quadraticCurveTo(x + w/2 - r - 10, cy + 6, x + w/2 - r - 18, cy + 10);
       ctx.stroke();
     }
-
-    function drawAlien(ctx, x, y, w, h) {
-      drawStickmanLines(ctx, x, y, w, h, ALIEN_GREEN, 3.5);
-    }
-
+    function drawAlien(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, ALIEN_GREEN, 3.5); }
     function drawRobot(ctx, x, y, w, h) {
       drawStickmanLines(ctx, x, y, w, h, ROBOT_GRAY, 3.5);
-      // Cyan eyes on head
       const hx = x + w/2, hy = y + 5;
       ctx.fillStyle = ROBOT_EYE_CYAN;
       ctx.beginPath(); ctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
     }
-
     function drawPirate(ctx, x, y, w, h) {
       drawStickmanLines(ctx, x, y, w, h, PIRATE_BLACK, 3.5);
-      // Hat: a simple brim and top above head
       const cx = x + w/2, cy = y - 2;
       ctx.fillStyle = PIRATE_BLACK;
-      ctx.fillRect(cx - 14, cy, 28, 4); // brim
+      ctx.fillRect(cx - 14, cy, 28, 4);
       ctx.beginPath();
       ctx.moveTo(cx - 10, cy);
       ctx.quadraticCurveTo(cx, cy - 10, cx + 10, cy);
       ctx.lineTo(cx + 10, cy + 8);
       ctx.lineTo(cx - 10, cy + 8);
-      ctx.closePath();
-      ctx.fill();
-      // Torso stripes: red and brown vertical stripes
+      ctx.closePath(); ctx.fill();
       const bodyTop = y + 12, bodyBottom = y + h - 10;
       ctx.strokeStyle = PIRATE_STRIPE_RED; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x + w/2 - 5, bodyTop); ctx.lineTo(x + w/2 - 5, bodyBottom); ctx.stroke();
       ctx.strokeStyle = PIRATE_STRIPE_BROWN;
       ctx.beginPath(); ctx.moveTo(x + w/2 + 5, bodyTop); ctx.lineTo(x + w/2 + 5, bodyBottom); ctx.stroke();
     }
-
     function drawSanta(ctx, x, y, w, h) {
-      // Body lines in red
       drawStickmanLines(ctx, x, y, w, h, SANTA_RED, 3.5);
-      // White cuffs on arms and legs
       ctx.strokeStyle = SANTA_WHITE; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x + 4, y + (h/2 - 5)); ctx.lineTo(x + 8, y + (h/2 - 5)); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + w - 8, y + (h/2 - 5)); ctx.lineTo(x + w - 4, y + (h/2 - 5)); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + 6, y + h - 2); ctx.lineTo(x + 10, y + h - 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + w - 10, y + h - 2); ctx.lineTo(x + w - 6, y + h - 2); ctx.stroke();
-      // White belt (mid-body)
-      const bodyTop = y + 12, bodyBottom = y + h - 10;
-      ctx.beginPath(); ctx.moveTo(x + w/2 - 9, (bodyTop+bodyBottom)/2); ctx.lineTo(x + w/2 + 9, (bodyTop+bodyBottom)/2); ctx.stroke();
-      // Santa hat (red with white trim & pom-pom)
       const hx = x + w/2, hy = y - 2;
       ctx.fillStyle = SANTA_RED;
       ctx.beginPath();
@@ -900,20 +1051,11 @@
       ctx.quadraticCurveTo(hx + 2, hy - 12, hx + 12, hy - 4);
       ctx.lineTo(hx + 12, hy);
       ctx.closePath(); ctx.fill();
-      // White trim
-      ctx.fillStyle = SANTA_WHITE;
-      ctx.fillRect(hx - 12, hy, 24, 3);
-      // Pom-pom
+      ctx.fillStyle = SANTA_WHITE; ctx.fillRect(hx - 12, hy, 24, 3);
       ctx.beginPath(); ctx.arc(hx + 12, hy - 4, 3, 0, Math.PI*2); ctx.fill();
     }
-
-    function drawGolden(ctx, x, y, w, h) {
-      drawStickmanLines(ctx, x, y, w, h, GOLDEN_LINE, 3.5);
-    }
-
-    function drawDefault(ctx, x, y, w, h) {
-      drawStickmanLines(ctx, x, y, w, h, DEFAULT_GOLD, 3.5);
-    }
+    function drawGolden(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, GOLDEN_LINE, 3.5); }
+    function drawDefault(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, DEFAULT_GOLD, 3.5); }
 
     // =======================================================
     // CLASSES
@@ -1299,6 +1441,7 @@
       if (key === 'hacker') return hackerLevel;
       if (key === 'jump') return jumpLevel;
       if (key === 'magnet') return magnetLevel;
+      if (key === 'curseBender') return curseBenderLevel;
       return 0;
     }
     function setUpgradeLevel(key, level) {
@@ -1306,6 +1449,7 @@
       if (key === 'hacker') hackerLevel = level;
       if (key === 'jump') jumpLevel = level;
       if (key === 'magnet') magnetLevel = level;
+      if (key === 'curseBender') curseBenderLevel = level;
     }
 
     // Skins UI (with previews)
@@ -1345,13 +1489,11 @@
       const pctx = canvasP.getContext('2d');
       pctx.clearRect(0, 0, canvasP.width, canvasP.height);
       const x = 18, y = 20, w = 24, h = 36;
-
       const drawLines = (color) => drawStickmanLines(pctx, x, y, w, h, color, 3);
 
       switch (skinId) {
-        case 'ninja':
+        case 'ninja': {
           drawLines('#000000');
-          // headband
           const cx = x + w/2, cy = y + 5, r = 6;
           pctx.strokeStyle = NINJA_BAND_RED; pctx.lineWidth = 2;
           pctx.beginPath(); pctx.arc(cx, cy, r, Math.PI*0.15, Math.PI*1.85); pctx.stroke();
@@ -1363,20 +1505,18 @@
           pctx.quadraticCurveTo(x + w/2 - r - 10, cy + 6, x + w/2 - r - 18, cy + 10);
           pctx.stroke();
           break;
-        case 'alien':
-          drawLines(ALIEN_GREEN);
-          break;
-        case 'robot':
+        }
+        case 'alien': drawLines(ALIEN_GREEN); break;
+        case 'robot': {
           drawLines(ROBOT_GRAY);
-          // eyes
           const hx = x + w/2, hy = y + 5;
           pctx.fillStyle = ROBOT_EYE_CYAN;
           pctx.beginPath(); pctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); pctx.fill();
           pctx.beginPath(); pctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); pctx.fill();
           break;
-        case 'pirate':
+        }
+        case 'pirate': {
           drawLines(PIRATE_BLACK);
-          // hat
           const px = x + w/2, py = y - 2;
           pctx.fillStyle = PIRATE_BLACK;
           pctx.fillRect(px - 14, py, 28, 4);
@@ -1386,23 +1526,20 @@
           pctx.lineTo(px + 10, py + 8);
           pctx.lineTo(px - 10, py + 8);
           pctx.closePath(); pctx.fill();
-          // stripes
           const bodyTop = y + 12, bodyBottom = y + h - 10;
           pctx.strokeStyle = PIRATE_STRIPE_RED; pctx.lineWidth = 3;
           pctx.beginPath(); pctx.moveTo(x + w/2 - 5, bodyTop); pctx.lineTo(x + w/2 - 5, bodyBottom); pctx.stroke();
           pctx.strokeStyle = PIRATE_STRIPE_BROWN;
           pctx.beginPath(); pctx.moveTo(x + w/2 + 5, bodyTop); pctx.lineTo(x + w/2 + 5, bodyBottom); pctx.stroke();
           break;
-        case 'santa':
+        }
+        case 'santa': {
           drawLines(SANTA_RED);
-          // cuffs and belt
           pctx.strokeStyle = SANTA_WHITE; pctx.lineWidth = 3;
           pctx.beginPath(); pctx.moveTo(x + 4, y + (h/2 - 5)); pctx.lineTo(x + 8, y + (h/2 - 5)); pctx.stroke();
           pctx.beginPath(); pctx.moveTo(x + w - 8, y + (h/2 - 5)); pctx.lineTo(x + w - 4, y + (h/2 - 5)); pctx.stroke();
           pctx.beginPath(); pctx.moveTo(x + 6, y + h - 2); pctx.lineTo(x + 10, y + h - 2); pctx.stroke();
           pctx.beginPath(); pctx.moveTo(x + w - 10, y + h - 2); pctx.lineTo(x + w - 6, y + h - 2); pctx.stroke();
-          pctx.beginPath(); pctx.moveTo(x + w/2 - 9, y + h/2); pctx.lineTo(x + w/2 + 9, y + h/2); pctx.stroke();
-          // hat
           const shx = x + w/2, shy = y - 2;
           pctx.fillStyle = SANTA_RED;
           pctx.beginPath();
@@ -1413,13 +1550,10 @@
           pctx.fillStyle = SANTA_WHITE; pctx.fillRect(shx - 12, shy, 24, 3);
           pctx.beginPath(); pctx.arc(shx + 12, shy - 4, 3, 0, Math.PI*2); pctx.fill();
           break;
-        case 'golden':
-          drawLines(GOLDEN_LINE);
-          break;
-        default:
-          drawLines(DEFAULT_GOLD);
+        }
+        case 'golden': drawLines(GOLDEN_LINE); break;
+        default: drawLines(DEFAULT_GOLD);
       }
-      // label baseline (optional subtle floor)
       pctx.strokeStyle = '#1f2937';
       pctx.lineWidth = 1;
       pctx.beginPath(); pctx.moveTo(8, y + h + 4); pctx.lineTo(canvasP.width - 8, y + h + 4); pctx.stroke();
@@ -1521,7 +1655,6 @@
       coinSpawnTimer = 0;
       currentSpeed = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
 
-      // Reset ability state
       jumpCount = 0;
       isHackerAbilityReady = true;
       hackerCooldownRemaining = 0;
@@ -1533,7 +1666,6 @@
         goldenHackerCooldownRemaining = 0;
       }
 
-      // Reset timed curses on new run
       activeCurses = activeCurses.filter(c => !c.expiresAt);
       curseFogActive = false;
       curseCoinTaxActive = false;
@@ -1582,10 +1714,10 @@
       const uiScore = Math.floor(score / 10);
       scoreElement.textContent = uiScore;
 
-      // Track best level
+      // Best level
       bestLevel = Math.max(bestLevel, uiScore);
 
-      // Trigger curse every 100 levels (once per threshold)
+      // Trigger curse every 100 levels
       const nextThreshold = Math.floor(uiScore / 100) * 100;
       if (uiScore > 0 && uiScore % 100 === 0 && nextThreshold !== lastCurseThresholdAwarded && !isPausedForCurse) {
         isPausedForCurse = true;
@@ -1593,7 +1725,7 @@
         return;
       }
 
-      // Speed ramp (consider speed surge permanent)
+      // Speed ramp
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const baseSpeedOffset = (curseSpeedSurgeActive ? 2 : 0);
       const calculatedSpeed = (BASE_GAME_SPEED + baseSpeedOffset) + (MAX_GAME_SPEED_INCREASE * speedFactor);
@@ -1626,7 +1758,7 @@
 
       updateCurses(deltaTime);
 
-      // Player physics with dynamic gravity
+      // Player physics
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
       if (!isFalling) {
         player.velocityY += getDynamicGravity();
@@ -1645,7 +1777,7 @@
         if (player.y > canvas.height + 50) { gameOver(); return; }
       }
 
-      // Obstacle density ramp (with frenzy curse)
+      // Obstacle density
       const initialRate = 100;
       const minRate = MIN_OBSTACLE_RATE;
       const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
@@ -1664,20 +1796,20 @@
         obstacleSpawnTimer = 0;
       }
 
-      // Traps: rare, start at UI score ≥ 250; increase rate with trap storm
+      // Traps
       const trapProb = TRAP_SPAWN_PROBABILITY * (curseTrapStormActive ? 3 : 1);
       if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < trapProb) {
         traps.push(new Trap());
       }
 
-      // Coins spawn
+      // Coins
       coinSpawnTimer++;
       if (coinSpawnTimer >= COIN_SPAWN_RATE) {
         if (Math.random() < 0.6) coins.push(new Coin());
         coinSpawnTimer = 0;
       }
 
-      // Magnet behavior: malfunction reverses zip direction
+      // Magnet behavior
       if (magnetLevel > 0 && coins.length > 0) {
         const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
         const px = player.x + player.width / 2;
@@ -1718,7 +1850,7 @@
         }
       }
 
-      // Update world objects using effectiveSpeed (player stays in place)
+      // World updates and collisions
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         obs.update(effectiveSpeed);
@@ -1778,20 +1910,18 @@
       ctx.fillStyle = '#2d3748';
       ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-      // Fog overlay if active
+      // Fog overlay
       if (curseFogActive) {
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Render order
       holes.forEach(hole => hole.draw());
       traps.forEach(trap => trap.draw());
       obstacles.forEach(obs => obs.draw());
       coins.forEach(coin => coin.draw());
       if (player) player.draw();
 
-      // Blind bar
       if (curseBlindBarActive) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(blindBar.x, 0, blindBar.w, canvas.height);
@@ -1833,11 +1963,12 @@
     });
 
     // Notes:
-    // - Gravity starts at 0.4 and increases slowly toward 1.0 (GRAVITY_SLOW_FACTOR).
     // - Slippery curse: brief world-speed burst, player stays fixed (consistent jump spot).
-    // - Skins match your references: Ninja, Alien, Robot, Pirate, Santa, Golden, plus default in gold.
-    // - Curse system triggers every 100 levels; mix of timed and permanent curses.
-    // - Golden skin unlocks Golden Hacker.
+    // - After selecting a curse, all obstacles/holes/traps/coins are cleared; spawning resumes fresh.
+    // - Curse Bender upgrade filters curses (L1 blocks Very Horrible, L2 blocks Horrible, L3 blocks Bad).
+    // - Admin panel unlocks by clicking "Leaderboard" title and entering code "stego".
+    // - Admin can delete accounts, grant coins, change high scores, and lock/unlock accounts.
+    // - Locked accounts cannot log in; login shows "Your account is locked."
   </script>
 </body>
 </html>
