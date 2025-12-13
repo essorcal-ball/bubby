@@ -241,7 +241,7 @@
     <!-- ADMIN SCREEN -->
     <div id="admin-panel" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
       <h2 class="text-5xl font-bold text-green-400 mb-2">Admin Panel</h2>
-      <p class="text-sm text-gray-300 mb-6">Manage users: delete accounts, grant coins, change scores, lock or unlock accounts.</p>
+      <p class="text-sm text-gray-300 mb-6">Manage users: delete accounts, grant coins, change scores, lock or unlock accounts, reset accounts.</p>
       <table class="w-full max-w-4xl text-left border-collapse">
         <thead class="table-header">
           <tr>
@@ -454,6 +454,7 @@
             <button class="btn-sm bg-yellow-600 hover:bg-yellow-700" onclick="adminGrantCoins('${username}', ${data.coins || 0})">Grant Coins</button>
             <button class="btn-sm bg-blue-600 hover:bg-blue-700" onclick="adminChangeScore('${username}', ${data.highScore || 0})">Change Score</button>
             <button class="btn-sm bg-gray-600 hover:bg-gray-700" onclick="adminToggleLock('${username}', ${data.locked ? 'true' : 'false'})">${data.locked ? 'Unlock' : 'Lock'}</button>
+            <button class="btn-sm bg-pink-600 hover:bg-pink-700" onclick="adminResetUser('${username}')">Reset</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -500,6 +501,39 @@
         logoutAccount();
       }
       updateAdminUI();
+    }
+    function adminResetUser(username) {
+      if (!confirm(`Reset account "${username}"? This will erase coins, levels, upgrades, and skins.`)) return;
+      const data = getUserData(username);
+      if (!data) return;
+      const resetData = {
+        password: data.password,
+        coins: 0,
+        highScore: 0,
+        bestLevel: 0,
+        upgrades: { time:0, hacker:0, jump:0, magnet:0, curseBender:0 },
+        skins: { owned:['default'], equipped:'default' },
+        goldenHackerUnlocked: false,
+        locked: data.locked || false
+      };
+      saveUserData(username, resetData);
+      if (currentUser === username) {
+        playerCoins = 0;
+        highScore = 0;
+        bestLevel = 0;
+        timeLevel = 0;
+        hackerLevel = 0;
+        jumpLevel = 0;
+        magnetLevel = 0;
+        curseBenderLevel = 0;
+        ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
+        equippedSkin = 'default';
+        goldenHackerUnlocked = false;
+        highScoreElement.textContent = highScore;
+        coinCountElement.textContent = playerCoins;
+      }
+      updateAdminUI();
+      updateLeaderboardUI();
     }
 
     // =======================================================
@@ -569,19 +603,23 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Gravity and movement
     const BASE_GRAVITY_START = 0.4;
     const MAX_GRAVITY = 1.0;
     const GRAVITY_SLOW_FACTOR = 1.5;
 
     const JUMP_VELOCITY = -12;
 
+    // Slower speed ramp
     const BASE_GAME_SPEED = 4.0;
     const MAX_GAME_SPEED_INCREASE = 8.0;
-    const MAX_SCORE_FOR_SPEED = 250;
+    const MAX_SCORE_FOR_SPEED = 400; // slower acceleration
 
-    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 300;
-    let obstacleSpawnRate = 100;
-    const MIN_OBSTACLE_RATE = 20;
+    // Slower obstacle grouping and spacing controls
+    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 350; // slower density increase
+    let obstacleSpawnRate = 110;
+    const MIN_OBSTACLE_RATE = 40; // slower minimum spawn rate
+    const MIN_OBSTACLE_SPACING = 140; // pixels between last obstacle and next spawn
 
     const GROUND_HEIGHT = 50;
     const PLAYER_SIZE = 40;
@@ -620,8 +658,9 @@
 
     let obstacleSpawnTimer = 0;
     let coinSpawnTimer = 0;
-    const COIN_SPAWN_RATE = 350;
+    const COIN_SPAWN_RATE = 380; // slightly less frequent
 
+    // Skins
     const SKINS = [
       { id: 'santa',  name: 'Santa Skin',  cost: 5 },
       { id: 'ninja',  name: 'Ninja Skin',  cost: 10 },
@@ -633,14 +672,17 @@
     let ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
     let equippedSkin = 'default';
 
+    // Golden Hacker special upgrade unlocked with golden skin
     const GOLDEN_HACKER_UPGRADE = { cooldown: 10000 };
     let goldenHackerUnlocked = false;
     let goldenHackerCooldownRemaining = 0;
     let goldenHackerReady = true;
 
+    // Trap rarity and threshold
     const TRAP_SPAWN_PROBABILITY = 0.015;
     const TRAP_MIN_UI_SCORE = 250;
 
+    // Magnet settings
     const magnetForce = 0.025;
 
     // =======================================================
@@ -727,9 +769,10 @@
     let activeCurses = [];
     let curseTimers = {};
 
+    // Effects toggles
     let curseFogActive = false;
     let curseCoinTaxActive = false;
-    let curseSlipActive = false;     // world speed burst
+    let curseSlipActive = false;     // updated slip behavior (world speed burst)
     let slipTimer = 0;
     let curseDoubleGravityActive = false;
     let curseSlowRecoverActive = false;
@@ -747,7 +790,7 @@
     const CURSES = [
       // Not so bad
       { id: 'fog', name: 'Foggy Vision', rating: 'Not so bad', duration: 30000,
-        description: 'A soft fog reduces visibility for 30s.',
+        description: 'Heavy fog reduces visibility for 30s.',
         apply: () => { curseFogActive = true; },
         cleanup: () => { curseFogActive = false; }
       },
@@ -815,9 +858,8 @@
     ];
 
     function pickRandomCurses(count = 3) {
-      // base pool
       let pool = [...CURSES];
-      // apply Curse Bender filter
+      // Apply Curse Bender filtering
       if (curseBenderLevel >= 1) pool = pool.filter(c => c.rating !== 'Very Horrible');
       if (curseBenderLevel >= 2) pool = pool.filter(c => c.rating !== 'Horrible');
       if (curseBenderLevel >= 3) pool = pool.filter(c => c.rating !== 'Bad');
@@ -828,7 +870,6 @@
         picks.push(pool[idx]);
         pool.splice(idx, 1);
       }
-      // if filtering made pool too small, fallback to safe "Not so bad" re-adds
       if (picks.length < count) {
         const safePool = CURSES.filter(c => c.rating === 'Not so bad');
         while (picks.length < count && safePool.length > 0) {
@@ -867,7 +908,6 @@
     }
 
     function applyCurseAndResume(curse) {
-      // apply effect
       curse.apply();
       const now = performance.now();
       activeCurses.push({
@@ -876,7 +916,7 @@
       });
       if (curse.duration) curseTimers[curse.id] = curse.duration;
 
-      // CLEAR ALL WORLD OBJECTS immediately after choosing a curse
+      // Clear all world objects immediately after choosing a curse
       obstacles = [];
       holes = [];
       traps = [];
@@ -966,7 +1006,7 @@
     // =======================================================
     // SKIN RENDER HELPERS
     // =======================================================
-    const DEFAULT_GOLD = '#f4c542';
+    const DEFAULT_GOLD = '#f4c542';       // sampled warm midtone
     const NINJA_BAND_RED = '#d81e1e';
     const ALIEN_GREEN = '#00ff00';
     const ROBOT_GRAY = '#8a8a8a';
@@ -1144,8 +1184,9 @@
           this.height = 15;
           this.width = 40 + Math.random() * 30;
           this.x = canvas.width;
-          this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.5 - Math.random() * 50;
-          this.vy = 0.3;
+          // Spawn air obstacles a bit higher and ensure spacing from last ground obstacle
+          this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.8 - Math.random() * 60;
+          this.vy = 0.25; // slightly slower drift
         }
       }
       update(speed) {
@@ -1169,8 +1210,8 @@
         const baseWidth = 75;
         const randomExtra = Math.random() * 75;
         const uiScore = Math.floor(score / 10);
-        const scaling = Math.min(uiScore / 200, 3);
-        this.width = (baseWidth + randomExtra) * (1 + scaling * 0.3);
+        const scaling = Math.min(uiScore / 220, 3); // slightly slower widening
+        this.width = (baseWidth + randomExtra) * (1 + scaling * 0.25);
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
@@ -1198,8 +1239,9 @@
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        this.color = '#2d3748';
-        this.tintAlpha = 0.08;
+        // Floor-like color to stay hidden
+        this.color = '#2d3748'; // same as ground
+        this.tintAlpha = 0.04;   // very subtle tint
         this.animationProgress = 0;
       }
       update(speed) {
@@ -1209,32 +1251,35 @@
         }
       }
       draw() {
+        // Base: looks like ground segment
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        // If not triggered, keep spikes hidden (flat)
         if (!this.isTriggered) {
+          // very subtle hint
           ctx.fillStyle = `rgba(255,0,0,${this.tintAlpha})`;
           ctx.fillRect(this.x, this.y, this.width, this.height);
+          return;
         }
-        const stickHeight = 20;
-        const stickWidth = 6;
+
+        // When triggered (stepped on), pop spikes animation
+        const spikeHeight = 20;
+        const spikeWidth = 6;
         const spacing = 20;
-        const numSticks = Math.floor(this.width / spacing);
-        const topRowY = this.y;
-        const bottomRowY = this.y;
-        for (let i = 0; i < numSticks; i++) {
+        const numSpikes = Math.floor(this.width / spacing);
+        const baseY = this.y; // from floor level
+
+        for (let i = 0; i < numSpikes; i++) {
           const baseX = this.x + i * spacing + 5;
-          ctx.save();
-          ctx.translate(baseX, topRowY);
-          if (this.isTriggered) ctx.rotate(-Math.PI / 4 * this.animationProgress);
+          const rise = spikeHeight * this.animationProgress;
           ctx.fillStyle = '#2b2f3a';
-          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
-          ctx.restore();
-          ctx.save();
-          ctx.translate(baseX + spacing/2, bottomRowY);
-          if (this.isTriggered) ctx.rotate(Math.PI / 4 * this.animationProgress);
-          ctx.fillStyle = '#2b2f3a';
-          ctx.fillRect(-stickWidth/2, -stickHeight, stickWidth, stickHeight);
-          ctx.restore();
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.lineTo(baseX + spikeWidth / 2, baseY - rise);
+          ctx.lineTo(baseX + spikeWidth, baseY);
+          ctx.closePath();
+          ctx.fill();
         }
       }
     }
@@ -1410,6 +1455,39 @@
       crouchButton.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
 
       canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver && !isPausedForCurse) player.jump(); });
+    }
+
+    // =======================================================
+    // SPAWN & BALANCE HELPERS
+    // =======================================================
+    function lastObstacleX() {
+      if (obstacles.length === 0) return -Infinity;
+      return obstacles[obstacles.length - 1].x;
+    }
+    function canSpawnObstacle() {
+      // Ensure minimum spacing from last obstacle
+      return (canvas.width - lastObstacleX()) > MIN_OBSTACLE_SPACING;
+    }
+    function closestGroundObstacleDistance() {
+      let minDist = Infinity;
+      for (const o of obstacles) {
+        if (o.type === 'ground') {
+          const dist = canvas.width - o.x;
+          if (dist < minDist) minDist = dist;
+        }
+      }
+      return minDist;
+    }
+    function canSpawnAirObstacleFarFromGround(threshold = 220) {
+      // ensure blue flying obstacles spawn far from recent red blocks
+      return closestGroundObstacleDistance() > threshold;
+    }
+    function canSpawnTrapFarFromObstacles(threshold = 240) {
+      for (const o of obstacles) {
+        const dist = canvas.width - o.x;
+        if (dist <= threshold) return false;
+      }
+      return true;
     }
 
     // =======================================================
@@ -1655,6 +1733,7 @@
       coinSpawnTimer = 0;
       currentSpeed = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
 
+      // Reset ability state
       jumpCount = 0;
       isHackerAbilityReady = true;
       hackerCooldownRemaining = 0;
@@ -1666,6 +1745,7 @@
         goldenHackerCooldownRemaining = 0;
       }
 
+      // Reset timed curses on new run
       activeCurses = activeCurses.filter(c => !c.expiresAt);
       curseFogActive = false;
       curseCoinTaxActive = false;
@@ -1714,10 +1794,10 @@
       const uiScore = Math.floor(score / 10);
       scoreElement.textContent = uiScore;
 
-      // Best level
+      // Track best level
       bestLevel = Math.max(bestLevel, uiScore);
 
-      // Trigger curse every 100 levels
+      // Trigger curse every 100 levels (once per threshold)
       const nextThreshold = Math.floor(uiScore / 100) * 100;
       if (uiScore > 0 && uiScore % 100 === 0 && nextThreshold !== lastCurseThresholdAwarded && !isPausedForCurse) {
         isPausedForCurse = true;
@@ -1725,7 +1805,7 @@
         return;
       }
 
-      // Speed ramp
+      // Speed ramp (slower)
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const baseSpeedOffset = (curseSpeedSurgeActive ? 2 : 0);
       const calculatedSpeed = (BASE_GAME_SPEED + baseSpeedOffset) + (MAX_GAME_SPEED_INCREASE * speedFactor);
@@ -1758,7 +1838,7 @@
 
       updateCurses(deltaTime);
 
-      // Player physics
+      // Player physics with dynamic gravity
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
       if (!isFalling) {
         player.velocityY += getDynamicGravity();
@@ -1777,32 +1857,41 @@
         if (player.y > canvas.height + 50) { gameOver(); return; }
       }
 
-      // Obstacle density
-      const initialRate = 100;
+      // Obstacle density ramp (slower) and spacing
+      const initialRate = 110;
       const minRate = MIN_OBSTACLE_RATE;
       const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
       const rateReduction = (initialRate - minRate) * difficultyFactor;
       obstacleSpawnRate = initialRate - rateReduction;
       if (curseObstacleFrenzyActive) obstacleSpawnRate = Math.max(minRate, obstacleSpawnRate / 2);
 
-      // Spawning
+      // Spawning with spacing rules
       obstacleSpawnTimer++;
-      if (obstacleSpawnTimer >= obstacleSpawnRate) {
-        if (Math.random() < 0.15) holes.push(new Hole());
-        else {
-          const type = Math.random() < 0.7 ? 'ground' : 'air';
-          obstacles.push(new Obstacle(type));
+      if (obstacleSpawnTimer >= obstacleSpawnRate && canSpawnObstacle()) {
+        if (Math.random() < 0.15) {
+          // Spawn hole only if spacing allows
+          holes.push(new Hole());
+        } else {
+          // Ground vs air with blue-air spacing constraint
+          const spawnAir = Math.random() < 0.3; // fewer air obstacles
+          if (spawnAir && canSpawnAirObstacleFarFromGround(220)) {
+            const type = 'air';
+            obstacles.push(new Obstacle(type));
+          } else {
+            const type = 'ground';
+            obstacles.push(new Obstacle(type));
+          }
         }
         obstacleSpawnTimer = 0;
       }
 
-      // Traps
+      // Traps: rare, start at UI score ≥ 250; must be far from obstacles
       const trapProb = TRAP_SPAWN_PROBABILITY * (curseTrapStormActive ? 3 : 1);
-      if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < trapProb) {
+      if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < trapProb && canSpawnTrapFarFromObstacles(260)) {
         traps.push(new Trap());
       }
 
-      // Coins
+      // Coins spawn
       coinSpawnTimer++;
       if (coinSpawnTimer >= COIN_SPAWN_RATE) {
         if (Math.random() < 0.6) coins.push(new Coin());
@@ -1850,7 +1939,7 @@
         }
       }
 
-      // World updates and collisions
+      // Update world objects using effectiveSpeed
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         obs.update(effectiveSpeed);
@@ -1874,6 +1963,7 @@
         const trap = traps[i];
         trap.update(effectiveSpeed);
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
+        // Trigger trap only when player lands/stands on it (hidden until then)
         if (!trap.isTriggered &&
             player.x + player.width > trap.x &&
             player.x < trap.x + trap.width &&
@@ -1910,18 +2000,20 @@
       ctx.fillStyle = '#2d3748';
       ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-      // Fog overlay
+      // Heavy fog overlay if active
       if (curseFogActive) {
-        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; // much foggier
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // Render order
       holes.forEach(hole => hole.draw());
       traps.forEach(trap => trap.draw());
       obstacles.forEach(obs => obs.draw());
       coins.forEach(coin => coin.draw());
       if (player) player.draw();
 
+      // Blind bar
       if (curseBlindBarActive) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(blindBar.x, 0, blindBar.w, canvas.height);
@@ -1963,11 +2055,14 @@
     });
 
     // Notes:
-    // - Slippery curse: brief world-speed burst, player stays fixed (consistent jump spot).
-    // - After selecting a curse, all obstacles/holes/traps/coins are cleared; spawning resumes fresh.
+    // - Slower speed ramp and obstacle density; enforced obstacle spacing and safer air spawns.
+    // - Heavy fog curse for reduced visibility.
+    // - Blue air obstacles spawn farther from red ground blocks.
+    // - Traps spawn far from obstacles, hinting when the field is clear; color blends with floor; spikes hidden until stepped on.
+    // - After selecting a curse, all hazards clear and respawn fresh.
     // - Curse Bender upgrade filters curses (L1 blocks Very Horrible, L2 blocks Horrible, L3 blocks Bad).
     // - Admin panel unlocks by clicking "Leaderboard" title and entering code "stego".
-    // - Admin can delete accounts, grant coins, change high scores, and lock/unlock accounts.
+    // - Admin can delete, grant coins, change scores, lock/unlock, and reset accounts.
     // - Locked accounts cannot log in; login shows "Your account is locked."
   </script>
 </body>
