@@ -25,6 +25,8 @@
     .badge-horrible { background: #ef444422; color: #ef4444; border: 1px solid #ef444455; }
     .badge-very { background: #7c3aed22; color: #7c3aed; border: 1px solid #7c3aed55; }
     .btn-sm { padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; }
+    .modal { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+    .hidden { display: none; }
   </style>
 </head>
 <body class="flex items-center justify-center text-white">
@@ -100,7 +102,7 @@
         <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">← Quit</button>
       </div>
 
-      <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
+      <div id="game-over-modal" class="modal bg-black bg-opacity-70">
         <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
           <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
           <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
@@ -109,7 +111,7 @@
       </div>
 
       <!-- CURSE MODAL -->
-      <div id="curse-modal" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+      <div id="curse-modal" class="modal bg-black bg-opacity-70 z-50">
         <div class="bg-[#0f172a] p-6 md:p-8 rounded-xl shadow-2xl border-4 border-[#e94560] max-w-3xl w-full">
           <h3 class="text-3xl md:text-4xl font-extrabold mb-4 text-white">Choose your curse</h3>
           <p class="text-sm md:text-base text-gray-300 mb-6">Every 100 levels, pick one curse. Some last for a duration, some persist until game over.</p>
@@ -603,7 +605,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Gravity and movement
     const BASE_GRAVITY_START = 0.4;
     const MAX_GRAVITY = 1.0;
     const GRAVITY_SLOW_FACTOR = 1.5;
@@ -772,7 +773,7 @@
     // Effects toggles
     let curseFogActive = false;
     let curseCoinTaxActive = false;
-    let curseSlipActive = false;     // updated slip behavior (world speed burst)
+    let curseSlipActive = false;
     let slipTimer = 0;
     let curseDoubleGravityActive = false;
     let curseSlowRecoverActive = false;
@@ -1006,7 +1007,7 @@
     // =======================================================
     // SKIN RENDER HELPERS
     // =======================================================
-    const DEFAULT_GOLD = '#f4c542';       // sampled warm midtone
+    const DEFAULT_GOLD = '#f4c542';
     const NINJA_BAND_RED = '#d81e1e';
     const ALIEN_GREEN = '#00ff00';
     const ROBOT_GRAY = '#8a8a8a';
@@ -1211,7 +1212,7 @@
         const randomExtra = Math.random() * 75;
         const uiScore = Math.floor(score / 10);
         const scaling = Math.min(uiScore / 220, 3); // slightly slower widening
-        this.width = (baseWidth + randomExtra) * (1 + scaling * 0.25);
+        this.width = Math.min((baseWidth + randomExtra) * (1 + scaling * 0.25), 200); // clamp to prevent phantom falls
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
@@ -1482,7 +1483,7 @@
       // ensure blue flying obstacles spawn far from recent red blocks
       return closestGroundObstacleDistance() > threshold;
     }
-    function canSpawnTrapFarFromObstacles(threshold = 240) {
+    function canSpawnTrapFarFromObstacles(threshold = 260) {
       for (const o of obstacles) {
         const dist = canvas.width - o.x;
         if (dist <= threshold) return false;
@@ -1854,7 +1855,7 @@
       } else {
         player.velocityY += getDynamicGravity(3);
         player.y += player.velocityY;
-        if (player.y > canvas.height + 50) { gameOver(); return; }
+        if (player.y > canvas.height + 50) { gameOver("fall out of bounds"); return; }
       }
 
       // Obstacle density ramp (slower) and spacing
@@ -1949,7 +1950,7 @@
             player.x + player.width > obs.x &&
             player.y < obs.y + obs.height &&
             player.y + player.height > obs.y) {
-          gameOver(); return;
+          gameOver("obstacle collision"); return;
         }
       }
 
@@ -1965,11 +1966,11 @@
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
         // Trigger trap only when player lands/stands on it (hidden until then)
         if (!trap.isTriggered &&
+            player.y + player.height === trap.y && // exact floor contact required
             player.x + player.width > trap.x &&
-            player.x < trap.x + trap.width &&
-            player.y + player.height >= trap.y) {
+            player.x < trap.x + trap.width) {
           trap.isTriggered = true;
-          gameOver(); return;
+          gameOver("trap collision"); return;
         }
       }
 
@@ -2020,7 +2021,7 @@
       }
     }
 
-    function gameOver() {
+    function gameOver(reason="unknown") {
       isGameOver = true;
       curseModal.style.display = 'none';
       const finalScore = Math.floor(score / 10);
@@ -2031,6 +2032,7 @@
       }
       bestLevel = Math.max(bestLevel, finalScore);
       persistUserData();
+      console.log("Game Over reason:", reason, "Score:", finalScore);
       gameOverModal.style.display = 'flex';
     }
 
@@ -2052,6 +2054,7 @@
       updateGoldenHackerButtonUI();
       window.addEventListener('mouseup', () => player?.crouch(false));
       window.addEventListener('touchend', () => player?.crouch(false));
+      goToScreen('login');
     });
 
     // Notes:
@@ -2059,6 +2062,8 @@
     // - Heavy fog curse for reduced visibility.
     // - Blue air obstacles spawn farther from red ground blocks.
     // - Traps spawn far from obstacles, hinting when the field is clear; color blends with floor; spikes hidden until stepped on.
+    // - Traps only trigger when player stands on top (prevents phantom collisions).
+    // - Holes are clamped in width to avoid false positives.
     // - After selecting a curse, all hazards clear and respawn fresh.
     // - Curse Bender upgrade filters curses (L1 blocks Very Horrible, L2 blocks Horrible, L3 blocks Bad).
     // - Admin panel unlocks by clicking "Leaderboard" title and entering code "stego".
