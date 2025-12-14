@@ -3,63 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <title>Game Hub</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-    .hidden { display: none; }
-    button { margin: 10px; padding: 10px 20px; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Welcome to the Game Hub</h1>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen">
 
-  <!-- Login Form -->
-  <div id="loginForm">
-    <input type="text" id="username" placeholder="Enter username">
-    <input type="password" id="password" placeholder="Enter password">
-    <button onclick="login()">Login</button>
+  <h1 class="text-5xl font-bold text-pink-500 mb-8">Arcade Hub</h1>
+
+  <!-- Login / Account -->
+  <div id="login-section" class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+    <input id="username" type="text" placeholder="Username" class="p-2 rounded text-black mb-2 w-full">
+    <input id="password" type="password" placeholder="Password" class="p-2 rounded text-black mb-2 w-full">
+    <button onclick="createAccount()" class="bg-green-600 px-4 py-2 rounded mr-2">Create Account</button>
+    <button onclick="loginAccount()" class="bg-blue-600 px-4 py-2 rounded">Login</button>
   </div>
 
-  <!-- Game Menu -->
-  <div id="gameMenu" class="hidden">
-    <h2>Select a Game</h2>
-    <p id="stats"></p>
-    <button onclick="location.href='stickman.html'">Play Stickman Jumper</button>
-    <button onclick="location.href='newgame.html'">Play New Game</button>
+  <!-- Account Bar -->
+  <div id="account-bar" class="hidden bg-gray-700 p-4 rounded-lg mb-8">
+    Logged in as: <span id="current-user"></span> |
+    Coins: <span id="coin-count">0</span> |
+    High Score (Stickman): <span id="stickman-score">0</span>
+    <button onclick="logout()" class="bg-red-600 px-3 py-1 rounded ml-4">Logout</button>
   </div>
 
-  <script>
-    function login() {
-      const user = document.getElementById('username').value;
-      const pass = document.getElementById('password').value;
+  <!-- Game Selection -->
+  <div id="game-menu" class="hidden flex flex-col space-y-4">
+    <a href="stickman.html" class="bg-purple-600 px-6 py-3 rounded-lg text-center hover:bg-purple-700">Play Stickman Jumper</a>
+    <a href="newgame.html" class="bg-yellow-600 px-6 py-3 rounded-lg text-center hover:bg-yellow-700">Play New Game (Coming Soon)</a>
+  </div>
 
-      if (user && pass) {
-        localStorage.setItem("loggedInUser", user);
+<script>
+function getUserData(username) {
+  const data = localStorage.getItem("arcadeUser_" + username);
+  return data ? JSON.parse(data) : null;
+}
+function saveUserData(username, data) {
+  localStorage.setItem("arcadeUser_" + username, JSON.stringify(data));
+}
 
-        // Initialize player data if not present
-        if (!localStorage.getItem("coins")) localStorage.setItem("coins", 0);
-        if (!localStorage.getItem("upgrades")) localStorage.setItem("upgrades", JSON.stringify({jumpBoost:0, speedBoost:0}));
+let currentUser = null;
 
-        showMenu();
-      } else {
-        alert("Please enter username and password.");
-      }
-    }
-
-    function showMenu() {
-      document.getElementById("loginForm").classList.add("hidden");
-      document.getElementById("gameMenu").classList.remove("hidden");
-
-      const coins = localStorage.getItem("coins");
-      const upgrades = JSON.parse(localStorage.getItem("upgrades"));
-      document.getElementById("stats").innerText =
-        `Coins: ${coins} | Upgrades: Jump Boost ${upgrades.jumpBoost}, Speed Boost ${upgrades.speedBoost}`;
-    }
-
-    window.onload = () => {
-      if (localStorage.getItem("loggedInUser")) {
-        showMenu();
-      }
-    };
-  </script>
+function createAccount() {
+  const u = document.getElementById("username").value.trim();
+  const p = document.getElementById("password").value.trim();
+  if (!u || !p) { alert("Fill all fields"); return; }
+  if (getUserData(u)) { alert("User exists"); return; }
+  const newUser = { password:p, coins:0, highScoreStickman:0 };
+  saveUserData(u,newUser);
+  alert("Account created! Please login.");
+}
+function loginAccount() {
+  const u = document.getElementById("username").value.trim();
+  const p = document.getElementById("password").value.trim();
+  const data = getUserData(u);
+  if (!data) { alert("No account"); return; }
+  if (data.password !== p) { alert("Wrong password"); return; }
+  currentUser = u;
+  document.getElementById("current-user").textContent = u;
+  document.getElementById("coin-count").textContent = data.coins;
+  document.getElementById("stickman-score").textContent = data.highScoreStickman;
+  document.getElementById("account-bar").classList.remove("hidden");
+  document.getElementById("game-menu").classList.remove("hidden");
+}
+function logout() {
+  currentUser = null;
+  document.getElementById("account-bar").classList.add("hidden");
+  document.getElementById("game-menu").classList.add("hidden");
+}
+</script>
 </body>
 </html>
