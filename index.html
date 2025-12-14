@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Hub</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    .hidden { display: none; }
+    button { margin: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to the Game Hub</h1>
+
+  <!-- Login Form -->
+  <div id="loginForm">
+    <input type="text" id="username" placeholder="Enter username">
+    <input type="password" id="password" placeholder="Enter password">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- Game Menu -->
+  <div id="gameMenu" class="hidden">
+    <h2>Select a Game</h2>
+    <p id="stats"></p>
+    <button onclick="location.href='stickman.html'">Play Stickman Jumper</button>
+    <button onclick="location.href='newgame.html'">Play New Game</button>
+  </div>
+
+  <script>
+    function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+
+      if (user && pass) {
+        localStorage.setItem("loggedInUser", user);
+
+        // Initialize player data if not present
+        if (!localStorage.getItem("coins")) localStorage.setItem("coins", 0);
+        if (!localStorage.getItem("upgrades")) localStorage.setItem("upgrades", JSON.stringify({jumpBoost:0, speedBoost:0}));
+
+        showMenu();
+      } else {
+        alert("Please enter username and password.");
+      }
+    }
+
+    function showMenu() {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("gameMenu").classList.remove("hidden");
+
+      const coins = localStorage.getItem("coins");
+      const upgrades = JSON.parse(localStorage.getItem("upgrades"));
+      document.getElementById("stats").innerText =
+        `Coins: ${coins} | Upgrades: Jump Boost ${upgrades.jumpBoost}, Speed Boost ${upgrades.speedBoost}`;
+    }
+
+    window.onload = () => {
+      if (localStorage.getItem("loggedInUser")) {
+        showMenu();
+      }
+    };
+  </script>
+</body>
+</html>
