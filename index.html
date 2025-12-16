@@ -5,32 +5,54 @@
   <title>Game Hub</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen">
+<body class="bg-gray-100 text-gray-900">
 
-  <h1 class="text-5xl font-bold text-pink-500 mb-8">Arcade Hub</h1>
+  <!-- Sticky Login Ribbon -->
+  <header class="fixed top-0 left-0 w-full bg-white shadow-md flex items-center justify-between px-6 py-2 z-50">
+    <div class="font-bold text-lg text-blue-600">Arcade Hub</div>
+    <div id="account-bar" class="hidden flex items-center gap-4">
+      <span>👤 <span id="current-user"></span></span>
+      <span>💰 Coins: <span id="coin-count">0</span></span>
+      <span>🏆 High Score: <span id="stickman-score">0</span></span>
+      <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
+    </div>
+    <div id="login-section" class="flex gap-2">
+      <input id="username" type="text" placeholder="Username" class="border rounded px-2 py-1">
+      <input id="password" type="password" placeholder="Password" class="border rounded px-2 py-1">
+      <button onclick="createAccount()" class="bg-green-500 text-white px-3 py-1 rounded">Sign Up</button>
+      <button onclick="loginAccount()" class="bg-blue-500 text-white px-3 py-1 rounded">Login</button>
+    </div>
+  </header>
 
-  <!-- Login / Account -->
-  <div id="login-section" class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-    <input id="username" type="text" placeholder="Username" class="p-2 rounded text-black mb-2 w-full">
-    <input id="password" type="password" placeholder="Password" class="p-2 rounded text-black mb-2 w-full">
-    <button onclick="createAccount()" class="bg-green-600 px-4 py-2 rounded mr-2">Create Account</button>
-    <button onclick="loginAccount()" class="bg-blue-600 px-4 py-2 rounded">Login</button>
-  </div>
+  <!-- Main Content -->
+  <main class="pt-20 px-6">
+    <h1 class="text-3xl font-bold mb-6">Choose Your Game</h1>
 
-  <!-- Account Bar -->
-  <div id="account-bar" class="hidden bg-gray-700 p-4 rounded-lg mb-8">
-    Logged in as: <span id="current-user"></span> |
-    Coins: <span id="coin-count">0</span> |
-    High Score (Stickman): <span id="stickman-score">0</span>
-    <button onclick="logout()" class="bg-red-600 px-3 py-1 rounded ml-4">Logout</button>
-  </div>
+    <!-- Game Cards Grid -->
+    <div id="game-menu" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      
+      <!-- Stickman Jumper Card -->
+      <div class="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+        <img src="attachments/5JFKTrxn6tAQNDcnPGAs6.png" alt="Stickman Jumper" class="w-full h-40 object-cover">
+        <div class="p-4">
+          <h2 class="text-lg font-bold">Stickman Jumper</h2>
+          <p class="text-sm text-gray-600 mb-3">Jump, dodge, and survive obstacles!</p>
+          <a href="./stickman.html" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Play</a>
+        </div>
+      </div>
 
-  <!-- Game Selection -->
-  <div id="game-menu" class="hidden flex flex-col space-y-4">
-    <!-- FIXED LINK: must match stickman.html filename -->
-    <a href="./stickman.html" class="bg-purple-600 px-6 py-3 rounded-lg text-center hover:bg-purple-700">Play Stickman Jumper</a>
-    <a href="./newgame.html" class="bg-yellow-600 px-6 py-3 rounded-lg text-center hover:bg-yellow-700">Play New Game (Coming Soon)</a>
-  </div>
+      <!-- Placeholder for New Game -->
+      <div class="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+        <div class="w-full h-40 bg-gray-300 flex items-center justify-center text-gray-500">Game Image</div>
+        <div class="p-4">
+          <h2 class="text-lg font-bold">New Game</h2>
+          <p class="text-sm text-gray-600 mb-3">Coming soon...</p>
+          <a href="./newgame.html" class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">Play</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
 
 <script>
 function getUserData(username) {
@@ -64,12 +86,14 @@ function loginAccount() {
   document.getElementById("coin-count").textContent = data.coins;
   document.getElementById("stickman-score").textContent = data.highScoreStickman;
   document.getElementById("account-bar").classList.remove("hidden");
+  document.getElementById("login-section").classList.add("hidden");
   document.getElementById("game-menu").classList.remove("hidden");
 }
 function logout() {
   currentUser = null;
   localStorage.removeItem("arcadeCurrentUser");
   document.getElementById("account-bar").classList.add("hidden");
+  document.getElementById("login-section").classList.remove("hidden");
   document.getElementById("game-menu").classList.add("hidden");
 }
 </script>
