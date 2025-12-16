@@ -29,15 +29,15 @@
     <h1 class="text-3xl font-bold mb-6">Choose Your Game</h1>
 
     <!-- Game Cards Grid -->
-    <div id="game-menu" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+    <div id="game-menu" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       
       <!-- Stickman Jumper Card -->
       <div class="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
-        <img src="attachments/5JFKTrxn6tAQNDcnPGAs6.png" alt="Stickman Jumper" class="w-full h-40 object-cover">
+        <img src="attachments/JFSXsvXmCJpYyKS6Dcknr.png" alt="Stickman Jumper" class="w-full h-40 object-cover">
         <div class="p-4">
           <h2 class="text-lg font-bold">Stickman Jumper</h2>
           <p class="text-sm text-gray-600 mb-3">Jump, dodge, and survive obstacles!</p>
-          <a href="./stickman.html" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Play</a>
+          <a href="./stickman.html" class="play-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Play</a>
         </div>
       </div>
 
@@ -47,7 +47,7 @@
         <div class="p-4">
           <h2 class="text-lg font-bold">New Game</h2>
           <p class="text-sm text-gray-600 mb-3">Coming soon...</p>
-          <a href="./newgame.html" class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">Play</a>
+          <a href="./newgame.html" class="play-btn bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">Play</a>
         </div>
       </div>
 
@@ -63,7 +63,7 @@ function saveUserData(username, data) {
   localStorage.setItem("arcadeUser_" + username, JSON.stringify(data));
 }
 
-let currentUser = null;
+let currentUser = localStorage.getItem("arcadeCurrentUser");
 
 function createAccount() {
   const u = document.getElementById("username").value.trim();
@@ -87,15 +87,35 @@ function loginAccount() {
   document.getElementById("stickman-score").textContent = data.highScoreStickman;
   document.getElementById("account-bar").classList.remove("hidden");
   document.getElementById("login-section").classList.add("hidden");
-  document.getElementById("game-menu").classList.remove("hidden");
 }
 function logout() {
   currentUser = null;
   localStorage.removeItem("arcadeCurrentUser");
   document.getElementById("account-bar").classList.add("hidden");
   document.getElementById("login-section").classList.remove("hidden");
-  document.getElementById("game-menu").classList.add("hidden");
 }
+
+// Disable play buttons if not logged in
+window.onload = () => {
+  if (!currentUser) {
+    document.querySelectorAll(".play-btn").forEach(btn => {
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+      btn.addEventListener("click", e => {
+        e.preventDefault();
+        alert("Please login to play this game.");
+      });
+    });
+  } else {
+    document.getElementById("account-bar").classList.remove("hidden");
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("current-user").textContent = currentUser;
+    const data = getUserData(currentUser);
+    if (data) {
+      document.getElementById("coin-count").textContent = data.coins;
+      document.getElementById("stickman-score").textContent = data.highScoreStickman;
+    }
+  }
+};
 </script>
 </body>
 </html>
