@@ -2,641 +2,267 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Stickman Jumper — Arcade Hub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Arcade Hero</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #1a1a2e; }
-    .screen { display: none; height: 100vh; width: 100vw; transition: opacity 0.3s ease-in-out; box-sizing: border-box; }
-    .main-button { transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -2px rgba(0,0,0,0.1); }
-    .main-button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.2); }
-    .main-button:active { transform: translateY(0); box-shadow: none; }
-    #gameCanvas { background-color: #4a5568; border: 4px solid #e94560; border-radius: 12px; touch-action: manipulation; }
-    .game-status-box { background-color: #16213e; border-radius: 8px; padding: 12px 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-    .shop-card { background-color: #16213e; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s; }
-    .shop-card:hover { transform: translateY(-2px); border-color: #e94560; }
-    .table-header { background-color: #1f2a44; }
-    .table-row { background-color: #203463; }
-    .table-row:nth-child(odd) { background-color: #1b2c4a; }
-    .skin-preview { border: 1px solid #374151; border-radius: 6px; background: #111827; }
-    .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; display: inline-block; }
-    .badge-not { background: #10b98122; color: #10b981; border: 1px solid #10b98155; }
-    .badge-bad { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b55; }
-    .badge-horrible { background: #ef444422; color: #ef4444; border: 1px solid #ef444455; }
-    .badge-very { background: #7c3aed22; color: #7c3aed; border: 1px solid #7c3aed55; }
-    .btn-sm { padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; }
-    .modal { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
-    .hidden { display: none; }
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --accent: #e94560;
+      --accent-2: #203463;
+      --ground: #2d3748;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+    .panel {
+      background: var(--panel);
+      border: 2px solid #1c305c;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .btn-main {
+      background: var(--accent-2);
+      border-bottom: 4px solid #1c305c;
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      font-weight: 700;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .btn-main:hover { background: #294b7b; transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.35); }
+    .btn-danger { background: #b91c1c; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-accent { background: var(--accent); }
+    .btn-accent:hover { background: #cf3d54; }
+    .btn-muted { background: #334155; }
+    .btn-muted:hover { background: #3b495e; }
+    .stat {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    }
+    #gameCanvas {
+      background: #4a5568;
+      border: 4px solid var(--accent);
+      border-radius: 14px;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    .badge { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; border-radius:999px; border:1px solid #243b66; background:#16213e; padding:3px 8px; }
+    .badge span.dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:50; }
+    .modal-card { max-width:900px; width:95%; }
+    .grid-3 { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .curse-card { background:#132246; border:2px solid #1c305c; padding:12px; border-radius:12px; display:flex; flex-direction:column; gap:10px; }
+    .curse-card h4 { font-weight:800; font-size:1rem; }
+    .shop-card { background:#132246; border:2px solid #1c305c; padding:16px; border-radius:12px; }
+    .skin-preview { border: 1px solid #374151; border-radius: 6px; background: #0b1220; }
+    .table { width:100%; border-collapse:collapse; }
+    .table thead { background:#0f1a33; }
+    .table th, .table td { padding:10px; }
+    .row { background:#16213e; }
+    .row:nth-child(odd) { background:#132246; }
+    .hint { font-size: 0.85rem; color: var(--muted); }
   </style>
 </head>
-<body class="flex items-center justify-center text-white">
+<body>
 
-  <div id="app-container" class="w-full h-full">
-
-    <!-- Sticky Account Bar -->
-    <div id="account-bar" class="fixed top-0 right-0 flex items-center space-x-4 bg-[#16213e] px-4 py-2 rounded-bl-lg shadow-lg z-50">
-      <span class="text-yellow-400 font-semibold">
-        Logged in as: <span id="current-username">Guest</span>
-      </span>
-      <button onclick="logoutAccount()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">Logout</button>
+  <header class="w-full py-3 px-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="btn-main btn-muted">← Back to Hub</a>
+      <div class="badge"><span class="dot" style="background:#34d399"></span> Shared account data from Hub</div>
     </div>
-
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="screen flex flex-col items-center justify-center p-8">
-      <h1 class="text-5xl font-extrabold text-[#e94560] mb-8">Welcome to Arcade Hero</h1>
-      <div class="w-full max-w-sm space-y-4">
-        <input id="username-input" type="text" placeholder="Enter Username" class="w-full p-3 rounded-lg text-black" />
-        <div class="relative">
-          <input id="password-input" type="password" placeholder="Enter Password" class="w-full p-3 rounded-lg text-black pr-12" />
-          <button type="button" onclick="togglePassword('password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-        </div>
-        <div class="relative">
-          <input id="confirm-password-input" type="password" placeholder="Confirm Password" class="w-full p-3 rounded-lg text-black pr-12" />
-          <button type="button" onclick="togglePassword('confirm-password-input')" class="absolute right-2 top-2 bg-gray-700 text-white px-2 py-1 rounded">Show</button>
-        </div>
-        <button onclick="createAccount()" class="main-button bg-green-600 text-white font-bold py-3 px-6 rounded-lg">Create Account</button>
-        <button onclick="loginAccount()" class="main-button bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Login</button>
-      </div>
+    <div id="account-bar" class="flex items-center gap-4 stat">
+      <div>Player: <span id="account-username" class="font-bold text-yellow-300">—</span></div>
+      <div>Coins: <span id="account-coins" class="font-bold text-yellow-300">0</span></div>
+      <div>High score: <span id="account-highscore" class="font-bold text-yellow-300">0</span></div>
     </div>
+  </header>
 
-    <!-- MENU SCREEN -->
-    <div id="menu-screen" class="screen flex flex-col items-center justify-center p-4">
-      <h1 class="text-6xl md:text-8xl font-extrabold text-[#e94560] mb-12 animate-pulse tracking-widest">ARCADE HERO</h1>
-      <div class="flex flex-col space-y-6 w-full max-w-sm">
-        <button onclick="goToScreen('game')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">PLAY GAME</button>
-        <button onclick="goToScreen('shop')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">SHOP</button>
-        <button onclick="goToScreen('leaderboard')" class="main-button bg-[#16213e] text-3xl font-bold py-4 rounded-xl border-b-4 border-[#1c305c] hover:bg-[#203463]">LEADERBOARD</button>
-      </div>
-    </div>
-
-    <!-- GAME SCREEN -->
-    <div id="game-screen" class="screen flex flex-col items-center justify-start py-8 px-4">
-      <div id="game-info" class="game-status-box flex justify-between w-full max-w-4xl mb-4">
-        <span class="text-xl font-semibold">Score: <span id="current-score">0</span></span>
-        <span class="text-xl font-semibold text-yellow-400">High Score: <span id="high-score">0</span></span>
-        <span class="text-xl font-semibold text-yellow-400">💰 Coins: <span id="coin-count">0</span></span>
-      </div>
-
-      <canvas id="gameCanvas" class="w-full max-w-4xl h-96 md:h-[500px]"></canvas>
-
-      <div id="game-controls" class="mt-6 flex flex-wrap justify-center gap-4">
-        <button onclick="player?.jump()" id="jump-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">JUMP</button>
-        <button id="crouch-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-xl active:shadow-none transition duration-150">CROUCH (ArrowDown/S)</button>
-
-        <button id="hacker-button" onclick="activateHackerAbility()" class="main-button bg-purple-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
-          <div id="hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
-          <span id="hacker-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY IN SHOP</span>
-        </button>
-
-        <button id="time-button" onclick="activateTimeAbility()" class="main-button bg-blue-600 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
-          <div id="time-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
-          <span id="time-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY TIME</span>
-        </button>
-
-        <button id="golden-hacker-button" onclick="activateGoldenHacker()" class="main-button bg-yellow-500 text-white font-bold py-3 px-8 rounded-lg relative overflow-hidden disabled:bg-gray-700 disabled:shadow-xl transition duration-150" disabled>
-          <div id="golden-hacker-cooldown-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height: 100%;"></div>
-          <span id="golden-hacker-cooldown-text" class="relative z-20 flex items-center justify-center font-extrabold text-lg text-white">BUY GOLDEN SKIN</span>
-        </button>
-
-        <button onclick="startGame()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">Restart Game</button>
-        <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-150">← Quit</button>
-      </div>
-
-      <div id="game-over-modal" class="modal bg-black bg-opacity-70">
-        <div class="bg-red-800 p-8 rounded-xl shadow-2xl text-center border-4 border-red-500">
-          <h3 class="text-5xl font-extrabold mb-4 text-white">GAME OVER!</h3>
-          <p class="text-2xl mb-6">Your Score: <span id="final-score" class="font-bold">0</span></p>
-          <button onclick="startGame()" class="main-button bg-[#e94560] text-2xl font-bold py-3 px-6 rounded-lg hover:bg-[#d53e54] transition duration-150">Try Again!</button>
+  <main class="w-full max-w-6xl mx-auto px-4 pb-24">
+    <section class="panel p-4 md:p-6 mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-[#e94560] tracking-wide">Stickman Jumper</h1>
+        <div class="flex items-center gap-3">
+          <button id="restart-btn" class="btn-main btn-accent">Restart</button>
+          <button id="quit-btn" class="btn-main btn-danger">Quit to Hub</button>
         </div>
       </div>
+      <p class="hint mt-2">Your progress and coins are saved to the shared Hub account. No separate login here.</p>
+    </section>
 
-      <!-- CURSE MODAL -->
-      <div id="curse-modal" class="modal bg-black bg-opacity-70 z-50">
-        <div class="bg-[#0f172a] p-6 md:p-8 rounded-xl shadow-2xl border-4 border-[#e94560] max-w-3xl w-full">
-          <h3 class="text-3xl md:text-4xl font-extrabold mb-4 text-white">Choose your curse</h3>
-          <p class="text-sm md:text-base text-gray-300 mb-6">Every 100 levels, pick one curse. Some last for a duration, some persist until game over.</p>
-          <div id="curse-options" class="grid md:grid-cols-3 gap-4"></div>
-          <div class="mt-6 flex justify-end">
-            <button id="skip-curse-button" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled>Skip (disabled)</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SHOP SCREEN -->
-    <div id="shop-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
-      <h2 class="text-5xl font-bold text-[#e94560] mb-8">The Item Shop</h2>
-      <p class="text-xl mb-4 text-center max-w-lg">
-        💰 Your Coins: <span id="shop-coin-count" class="font-bold text-yellow-400">0</span>
-        | High Score: <span id="shop-high-score" class="font-bold text-yellow-400">0</span>
-      </p>
-      <p class="text-lg mb-8 text-center max-w-lg">Spend your hard-earned coins on upgrades and skins.</p>
-
-      <div class="w-full max-w-2xl space-y-6">
-        <!-- Time Ability -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-blue-400">Time Warp Ability (Active)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Temporal Slowdown (T)</p>
-            <p class="text-lg text-gray-300 mb-2">Temporarily slows the entire game.</p>
-            <p class="text-lg">Level: <span id="time-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="time-effect">Effect: Not yet purchased.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="time-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="time-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-time-button" onclick="buyUpgrade('time')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
+    <section class="grid md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 panel p-3 md:p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="stat">Score: <span id="ui-score" class="font-bold text-green-300">0</span></div>
+          <div class="stat">High: <span id="ui-high" class="font-bold text-yellow-300">0</span></div>
+          <div class="stat">Coins: <span id="ui-coins" class="font-bold text-yellow-300">0</span></div>
+          <div class="stat">Best level: <span id="ui-best" class="font-bold text-blue-300">0</span></div>
         </div>
 
-        <!-- Hacker Ability -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-purple-400">Hacker Ability (Active)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Obstacle Bypass (X)</p>
-            <p class="text-lg text-gray-300 mb-2">Bypass obstacles instantly.</p>
-            <p class="text-lg">Level: <span id="hacker-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="hacker-effect">Effect: Not yet purchased.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="hacker-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="hacker-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-hacker-button" onclick="buyUpgrade('hacker')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
+        <canvas id="gameCanvas" class="w-full h-96 md:h-[520px]"></canvas>
+
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button id="btn-jump" class="btn-main">Jump (Space/Enter)</button>
+          <button id="btn-crouch" class="btn-main">Crouch (ArrowDown/S)</button>
+
+          <button id="btn-hacker" class="btn-main relative overflow-hidden" disabled>
+            <div id="hacker-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height:100%;"></div>
+            <span id="hacker-text" class="relative z-10">Hacker: Buy in Shop</span>
+          </button>
+
+          <button id="btn-time" class="btn-main relative overflow-hidden" disabled>
+            <div id="time-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height:100%;"></div>
+            <span id="time-text" class="relative z-10">Time Warp: Buy</span>
+          </button>
+
+          <button id="btn-golden" class="btn-main relative overflow-hidden" disabled>
+            <div id="gold-overlay" class="absolute inset-0 bg-red-600 opacity-80 transition-all duration-100 ease-linear" style="height:100%;"></div>
+            <span id="gold-text" class="relative z-10">Golden: Buy Golden Skin</span>
+          </button>
+        </div>
+
+        <div id="game-over-backdrop" class="modal-backdrop">
+          <div class="modal-card panel p-6 border-4 border-red-600 text-center">
+            <h2 class="text-4xl font-extrabold mb-3">Game Over</h2>
+            <p class="text-xl mb-4">Score: <span id="final-score" class="font-bold">0</span></p>
+            <div class="flex items-center gap-3 justify-center">
+              <button id="btn-try-again" class="btn-main btn-accent">Try Again</button>
+              <a href="index.html" class="btn-main btn-muted">Back to Hub</a>
+            </div>
           </div>
         </div>
 
-        <!-- Jump Upgrade -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-green-400">Jump Upgrade (Passive)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Multi-Jump Capability</p>
-            <p class="text-lg text-gray-300 mb-2">Jump additional times mid-air before landing.</p>
-            <p class="text-lg">Level: <span id="jump-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="jump-effect">Effect: Standard single jump.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="jump-req"></p>
+        <div id="curse-backdrop" class="modal-backdrop">
+          <div class="modal-card panel border-4 border-[#e94560] p-5">
+            <h3 class="text-2xl font-extrabold mb-2">Choose your curse</h3>
+            <p class="hint mb-4">Every 100 levels, pick a curse. Some last for a duration, some are permanent.</p>
+            <div id="curse-options" class="grid-3"></div>
+            <div class="flex justify-end mt-3">
+              <button class="btn-main btn-muted opacity-60 cursor-not-allowed">Skip (disabled)</button>
+            </div>
           </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="jump-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-jump-button" onclick="buyUpgrade('jump')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Money Magnet -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-yellow-400">Money Magnet (Passive)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Coin Attraction Field</p>
-            <p class="text-lg text-gray-300 mb-2">Attracts coins towards you and increases their value.</p>
-            <p class="text-lg">Level: <span id="magnet-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="magnet-effect">Effect: No magnet. Collect coins normally (1 coin value).</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="magnet-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="magnet-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-magnet-button" onclick="buyUpgrade('magnet')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Curse Bender -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-pink-400">Curse Bender (Passive)</h3>
-          <div class="bg-[#203463] p-4 rounded-lg">
-            <p class="text-2xl font-bold">Curse Filtering</p>
-            <p class="text-lg text-gray-300 mb-2">Block entire categories of curses from appearing.</p>
-            <p class="text-lg">Level: <span id="curseBender-level" class="font-bold text-green-400">0</span></p>
-            <p class="text-sm mt-1" id="curseBender-effect">Effect: No curse protection.</p>
-            <p class="text-sm mt-2 font-semibold text-red-300" id="curseBender-req"></p>
-          </div>
-          <div class="flex justify-between items-center mt-4">
-            <p id="curseBender-cost" class="text-xl font-bold text-yellow-400">Cost: -- Coins</p>
-            <button id="buy-curseBender-button" onclick="buyUpgrade('curseBender')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">Buy</button>
-          </div>
-        </div>
-
-        <!-- Skins -->
-        <div class="shop-card p-6 border-2 border-[#1c305c]">
-          <h3 class="text-3xl font-bold mb-4 text-red-400">Skins</h3>
-          <div id="skins-list" class="space-y-4"></div>
         </div>
       </div>
 
-      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-150 mt-8 mb-4">← Back to Menu</button>
-    </div>
+      <aside class="panel p-4">
+        <h3 class="text-xl font-bold mb-3">Upgrades & Skins (Read-only)</h3>
+        <p class="hint mb-4">Manage purchases in the Hub’s shop. This panel reflects your unlocked levels here.</p>
 
-    <!-- LEADERBOARD SCREEN -->
-    <div id="leaderboard-screen" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
-      <h2 id="leaderboard-title" class="text-5xl font-bold text-[#e94560] mb-8 cursor-pointer">Leaderboard</h2>
-      <p class="text-lg mb-6 text-center max-w-lg">Most levels reached (best score milestones) across all users.</p>
-      <table class="w-full max-w-2xl text-left border-collapse">
-        <thead class="table-header">
-          <tr>
-            <th class="p-3">Rank</th>
-            <th class="p-3">Player</th>
-            <th class="p-3">Best Level</th>
-          </tr>
-        </thead>
-        <tbody id="leaderboard-body" class="text-white"></tbody>
-      </table>
-      <button onclick="goToScreen('menu')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg mt-8">← Back to Menu</button>
-    </div>
+        <div class="shop-card mb-3">
+          <h4 class="text-lg font-bold text-blue-300 mb-2">Time Warp</h4>
+          <p>Level: <span id="time-level" class="font-bold text-green-300">0</span></p>
+          <p id="time-effect" class="hint mt-1">Effect: Not yet purchased.</p>
+        </div>
+        <div class="shop-card mb-3">
+          <h4 class="text-lg font-bold text-purple-300 mb-2">Hacker</h4>
+          <p>Level: <span id="hacker-level" class="font-bold text-green-300">0</span></p>
+          <p id="hacker-effect" class="hint mt-1">Effect: Not yet purchased.</p>
+        </div>
+        <div class="shop-card mb-3">
+          <h4 class="text-lg font-bold text-green-300 mb-2">Jump</h4>
+          <p>Level: <span id="jump-level" class="font-bold text-green-300">0</span></p>
+          <p id="jump-effect" class="hint mt-1">Standard single jump.</p>
+        </div>
+        <div class="shop-card mb-3">
+          <h4 class="text-lg font-bold text-yellow-300 mb-2">Magnet</h4>
+          <p>Level: <span id="magnet-level" class="font-bold text-green-300">0</span></p>
+          <p id="magnet-effect" class="hint mt-1">No magnet. Coins worth 1.</p>
+        </div>
+        <div class="shop-card mb-3">
+          <h4 class="text-lg font-bold text-pink-300 mb-2">Curse Bender</h4>
+          <p>Level: <span id="curseBender-level" class="font-bold text-green-300">0</span></p>
+          <p id="curseBender-effect" class="hint mt-1">No curse protection.</p>
+        </div>
 
-    <!-- ADMIN SCREEN -->
-    <div id="admin-panel" class="screen flex flex-col items-center justify-start pt-16 p-4 overflow-y-auto">
-      <h2 class="text-5xl font-bold text-green-400 mb-2">Admin Panel</h2>
-      <p class="text-sm text-gray-300 mb-6">Manage users: delete accounts, grant coins, change scores, lock or unlock accounts, reset accounts.</p>
-      <table class="w-full max-w-4xl text-left border-collapse">
-        <thead class="table-header">
-          <tr>
-            <th class="p-3">Username</th>
-            <th class="p-3">Coins</th>
-            <th class="p-3">High Score</th>
-            <th class="p-3">Locked</th>
-            <th class="p-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="admin-users-body" class="text-white"></tbody>
-      </table>
-      <div class="mt-8 flex gap-3">
-        <button onclick="goToScreen('leaderboard')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg">← Back to Leaderboard</button>
-        <button onclick="updateAdminUI()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">Refresh</button>
-      </div>
-    </div>
-  </div>
+        <div class="shop-card">
+          <h4 class="text-lg font-bold text-red-300 mb-2">Skins</h4>
+          <div id="skins-list" class="space-y-3"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel p-4 mt-6">
+      <h3 class="text-xl font-bold">Patch Notes</h3>
+      <ul class="list-disc pl-6 mt-2 text-sm text-gray-300">
+        <li>Speed ramp slowed, obstacle density increases more gently.</li>
+        <li>Enforced obstacle spacing; flying obstacles spawn away from red ground blocks.</li>
+        <li>Fog curse made heavier for visibility challenge.</li>
+        <li>Traps blend with floor and only trigger when you stand on them; hidden until stepped.</li>
+        <li>Trap and hole false positives reduced with tightened collision checks and hole width clamp.</li>
+        <li>Shared account data from Hub; this page is login-free and read-only for shop.</li>
+      </ul>
+    </section>
+  </main>
 
   <script>
-    // =======================================================
-    // ACCOUNT SYSTEM
-    // =======================================================
-    let currentUser = null;
-    const currentUsernameElement = document.getElementById('current-username');
-
-    function getUserData(username) {
-      const data = localStorage.getItem(`stickmanUser_${username}`);
-      return data ? JSON.parse(data) : null;
+    // -------------------------------------------------------
+    // Hub Account Bridge
+    // -------------------------------------------------------
+    function hubGetCurrentUser() {
+      return localStorage.getItem("arcadeCurrentUser") || null;
     }
-    function saveUserData(username, data) {
-      localStorage.setItem(`stickmanUser_${username}`, JSON.stringify(data));
+    function hubGetUserData(username) {
+      const raw = localStorage.getItem("arcadeUser_" + username);
+      return raw ? JSON.parse(raw) : null;
     }
-    function togglePassword(fieldId) {
-      const passwordField = document.getElementById(fieldId);
-      const toggleButton = passwordField.nextElementSibling;
-      if (passwordField.type === "password") {
-        passwordField.type = "text"; toggleButton.textContent = "Hide";
-      } else {
-        passwordField.type = "password"; toggleButton.textContent = "Show";
-      }
-    }
-    function createAccount() {
-      const username = document.getElementById('username-input').value.trim();
-      const password = document.getElementById('password-input').value.trim();
-      const confirmPassword = document.getElementById('confirm-password-input').value.trim();
-      if (!username || !password || !confirmPassword) { alert("Please fill in all fields."); return; }
-      if (password !== confirmPassword) { alert("Passwords do not match."); return; }
-      if (getUserData(username)) { alert("Account already exists. Please login."); return; }
-      const newUser = {
-        password,
-        coins: 0,
-        highScore: 0,
-        bestLevel: 0,
-        upgrades: { time:0, hacker:0, jump:0, magnet:0, curseBender:0 },
-        skins: { owned:['default'], equipped:'default' },
-        goldenHackerUnlocked: false,
-        locked: false
-      };
-      saveUserData(username, newUser);
-      alert("Account created! Please login.");
-    }
-    function loginAccount() {
-      const username = document.getElementById('username-input').value.trim();
-      const password = document.getElementById('password-input').value.trim();
-      const userData = getUserData(username);
-      if (!userData) { alert("No account found. Please create one."); return; }
-      if (userData.locked) { alert("Your account is locked."); return; }
-      if (userData.password !== password) { alert("Incorrect password."); return; }
-      currentUser = username;
-      loadUserData(userData);
-      updateUserStatus();
-      goToScreen('menu');
-    }
-    function logoutAccount() {
-      if (!currentUser) { alert("No user is currently logged in."); return; }
-      persistUserData();
-      alert(`Logged out from ${currentUser}.`);
-      currentUser = null;
-
-      // Reset in-memory state
-      playerCoins = 0;
-      highScore = 0;
-      bestLevel = 0;
-      timeLevel = 0;
-      hackerLevel = 0;
-      jumpLevel = 0;
-      magnetLevel = 0;
-      curseBenderLevel = 0;
-      ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
-      equippedSkin = 'default';
-      goldenHackerUnlocked = false;
-
-      highScoreElement.textContent = highScore;
-      coinCountElement.textContent = playerCoins;
-      updateUserStatus();
-      goToScreen('login');
-    }
-    function loadUserData(userData) {
-      playerCoins = userData.coins;
-      highScore = userData.highScore || 0;
-      bestLevel = userData.bestLevel || 0;
-      timeLevel = userData.upgrades.time || 0;
-      hackerLevel = userData.upgrades.hacker || 0;
-      jumpLevel = userData.upgrades.jump || 0;
-      magnetLevel = userData.upgrades.magnet || 0;
-      curseBenderLevel = userData.upgrades.curseBender || 0;
-
-      ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
-      (userData.skins?.owned || []).forEach(id => { ownedSkins[id] = true; });
-      equippedSkin = userData.skins?.equipped || 'default';
-      goldenHackerUnlocked = !!userData.goldenHackerUnlocked || ownedSkins.golden;
-
-      highScoreElement.textContent = highScore;
-      coinCountElement.textContent = playerCoins;
-    }
-    function persistUserData() {
-      if (!currentUser) return;
-      const existing = getUserData(currentUser);
-      const ownedList = Object.keys(ownedSkins).filter(k => ownedSkins[k]);
-      const userData = {
-        password: existing?.password || '',
-        coins: playerCoins,
-        highScore: highScore,
-        bestLevel: Math.max(existing?.bestLevel || 0, bestLevel),
-        upgrades: { time: timeLevel, hacker: hackerLevel, jump: jumpLevel, magnet: magnetLevel, curseBender: curseBenderLevel },
-        skins: { owned: ownedList, equipped: equippedSkin },
-        goldenHackerUnlocked,
-        locked: existing?.locked || false
-      };
-      saveUserData(currentUser, userData);
-    }
-    function updateUserStatus() {
-      currentUsernameElement.textContent = currentUser ? currentUser : "Guest";
+    function hubSaveUserData(username, data) {
+      localStorage.setItem("arcadeUser_" + username, JSON.stringify(data));
     }
 
-    // =======================================================
-    // LEADERBOARD
-    // =======================================================
-    function getLeaderboard() {
-      const leaderboard = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('stickmanUser_')) {
-          const data = JSON.parse(localStorage.getItem(key)) || {};
-          leaderboard.push({
-            username: key.replace('stickmanUser_', ''),
-            bestLevel: data.bestLevel || 0
-          });
-        }
-      }
-      leaderboard.sort((a, b) => b.bestLevel - a.bestLevel);
-      return leaderboard.slice(0, 10);
-    }
-    function updateLeaderboardUI() {
-      const tbody = document.getElementById('leaderboard-body');
-      tbody.innerHTML = '';
-      const lb = getLeaderboard();
-      lb.forEach((entry, index) => {
-        const tr = document.createElement('tr');
-        tr.className = 'table-row';
-        tr.innerHTML = `
-          <td class="p-3">${index+1}</td>
-          <td class="p-3">${entry.username}</td>
-          <td class="p-3">${entry.bestLevel}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+    // -------------------------------------------------------
+    // Shared State
+    // -------------------------------------------------------
+    let currentUsername = null;
+    let userData = null;
 
-    // Admin unlock via leaderboard title
-    const leaderboardTitle = document.getElementById('leaderboard-title');
-    leaderboardTitle.addEventListener('click', () => {
-      const code = prompt("Enter access code:");
-      if (code && code.toLowerCase() === "stego") {
-        goToScreen('admin');
-        updateAdminUI();
-      } else {
-        alert("Incorrect code.");
-      }
-    });
-
-    // =======================================================
-    // ADMIN PANEL LOGIC
-    // =======================================================
-    function updateAdminUI() {
-      const tbody = document.getElementById('admin-users-body');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      const users = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('stickmanUser_')) {
-          const data = JSON.parse(localStorage.getItem(key)) || {};
-          const username = key.replace('stickmanUser_', '');
-          users.push({ username, data });
-        }
-      }
-      users.sort((a, b) => a.username.localeCompare(b.username));
-      users.forEach(({ username, data }) => {
-        const tr = document.createElement('tr');
-        tr.className = 'table-row';
-        tr.innerHTML = `
-          <td class="p-3">${username}</td>
-          <td class="p-3">${data.coins || 0}</td>
-          <td class="p-3">${data.highScore || 0}</td>
-          <td class="p-3">${data.locked ? '<span class="text-red-400 font-semibold">Yes</span>' : '<span class="text-green-400 font-semibold">No</span>'}</td>
-          <td class="p-3 space-x-2">
-            <button class="btn-sm bg-red-600 hover:bg-red-700" onclick="adminDeleteUser('${username}')">Delete</button>
-            <button class="btn-sm bg-yellow-600 hover:bg-yellow-700" onclick="adminGrantCoins('${username}', ${data.coins || 0})">Grant Coins</button>
-            <button class="btn-sm bg-blue-600 hover:bg-blue-700" onclick="adminChangeScore('${username}', ${data.highScore || 0})">Change Score</button>
-            <button class="btn-sm bg-gray-600 hover:bg-gray-700" onclick="adminToggleLock('${username}', ${data.locked ? 'true' : 'false'})">${data.locked ? 'Unlock' : 'Lock'}</button>
-            <button class="btn-sm bg-pink-600 hover:bg-pink-700" onclick="adminResetUser('${username}')">Reset</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function adminDeleteUser(username) {
-      if (!confirm(`Delete account "${username}"? This cannot be undone.`)) return;
-      localStorage.removeItem(`stickmanUser_${username}`);
-      if (currentUser === username) { currentUser = null; updateUserStatus(); }
-      updateAdminUI();
-      updateLeaderboardUI();
-    }
-    function adminGrantCoins(username, currentCoins) {
-      const input = prompt(`Current coins: ${currentCoins}\nHow many coins to grant? (can be negative)`);
-      if (input === null) return;
-      const amount = parseInt(input, 10);
-      if (isNaN(amount)) { alert('Invalid amount.'); return; }
-      const data = getUserData(username);
-      data.coins = Math.max(0, (data.coins || 0) + amount);
-      saveUserData(username, data);
-      if (currentUser === username) { playerCoins = data.coins; coinCountElement.textContent = playerCoins; }
-      updateAdminUI();
-    }
-    function adminChangeScore(username, currentScore) {
-      const input = prompt(`Current high score: ${currentScore}\nEnter new high score:`);
-      if (input === null) return;
-      const newScore = parseInt(input, 10);
-      if (isNaN(newScore) || newScore < 0) { alert('Invalid score.'); return; }
-      const data = getUserData(username);
-      data.highScore = newScore;
-      data.bestLevel = Math.max(data.bestLevel || 0, newScore);
-      saveUserData(username, data);
-      if (currentUser === username) { highScore = newScore; highScoreElement.textContent = highScore; }
-      updateAdminUI();
-      updateLeaderboardUI();
-    }
-    function adminToggleLock(username, isLocked) {
-      const data = getUserData(username);
-      data.locked = !isLocked;
-      saveUserData(username, data);
-      if (currentUser === username && data.locked) {
-        alert("Your account has been locked by admin. You will be logged out.");
-        logoutAccount();
-      }
-      updateAdminUI();
-    }
-    function adminResetUser(username) {
-      if (!confirm(`Reset account "${username}"? This will erase coins, levels, upgrades, and skins.`)) return;
-      const data = getUserData(username);
-      if (!data) return;
-      const resetData = {
-        password: data.password,
-        coins: 0,
-        highScore: 0,
-        bestLevel: 0,
-        upgrades: { time:0, hacker:0, jump:0, magnet:0, curseBender:0 },
-        skins: { owned:['default'], equipped:'default' },
-        goldenHackerUnlocked: false,
-        locked: data.locked || false
-      };
-      saveUserData(username, resetData);
-      if (currentUser === username) {
-        playerCoins = 0;
-        highScore = 0;
-        bestLevel = 0;
-        timeLevel = 0;
-        hackerLevel = 0;
-        jumpLevel = 0;
-        magnetLevel = 0;
-        curseBenderLevel = 0;
-        ownedSkins = { default:true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
-        equippedSkin = 'default';
-        goldenHackerUnlocked = false;
-        highScoreElement.textContent = highScore;
-        coinCountElement.textContent = playerCoins;
-      }
-      updateAdminUI();
-      updateLeaderboardUI();
-    }
-
-    // =======================================================
-    // NAVIGATION
-    // =======================================================
-    let currentScreen = 'login';
-    let animationFrameId = null;
-    let lastTime = 0;
-
-    const screens = {
-      login: document.getElementById('login-screen'),
-      menu: document.getElementById('menu-screen'),
-      game: document.getElementById('game-screen'),
-      shop: document.getElementById('shop-screen'),
-      leaderboard: document.getElementById('leaderboard-screen'),
-      admin: document.getElementById('admin-panel')
-    };
-    const gameOverModal = document.getElementById('game-over-modal');
-    const curseModal = document.getElementById('curse-modal');
-    const curseOptionsContainer = document.getElementById('curse-options');
-
-    function goToScreen(targetScreen) {
-      if ((targetScreen === 'game' || targetScreen === 'shop' || targetScreen === 'leaderboard') && !currentUser) {
-        alert("You must log in first!");
-        targetScreen = 'login';
-      }
-      if (currentScreen === targetScreen) {
-        if (targetScreen === 'leaderboard') updateLeaderboardUI();
-        if (targetScreen === 'admin') updateAdminUI();
-        return;
-      }
-
-      if (currentScreen === 'game') stopGame();
-
-      Object.values(screens).forEach(screen => { if (screen) screen.style.display = 'none'; });
-      if (screens[targetScreen]) {
-        screens[targetScreen].style.display = 'flex';
-        currentScreen = targetScreen;
-
-        if (targetScreen === 'game') {
-          resizeCanvas();
-          startGame();
-        } else if (targetScreen === 'shop') {
-          updateShopUI();
-          updateSkinsUI();
-        } else if (targetScreen === 'leaderboard') {
-          updateLeaderboardUI();
-        } else if (targetScreen === 'admin') {
-          updateAdminUI();
-        }
-      } else {
-        console.error(`Unknown screen: ${targetScreen}`);
-      }
-    }
-
-    window.onload = () => {
-      goToScreen('login');
-      updateUserStatus();
-    };
-    window.addEventListener('resize', () => {
-      if (currentScreen === 'game') resizeCanvas();
-    });
-
-    // =======================================================
-    // GAME CONSTANTS AND STATE
-    // =======================================================
+    // Game state
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const BASE_GRAVITY_START = 0.4;
-    const MAX_GRAVITY = 1.0;
-    const GRAVITY_SLOW_FACTOR = 1.5;
+    const GROUND_HEIGHT = 58;
+    const PLAYER_SIZE = 42;
 
-    const JUMP_VELOCITY = -12;
-
-    // Slower speed ramp
     const BASE_GAME_SPEED = 4.0;
     const MAX_GAME_SPEED_INCREASE = 8.0;
-    const MAX_SCORE_FOR_SPEED = 400; // slower acceleration
+    const MAX_SCORE_FOR_SPEED = 400;
 
-    // Slower obstacle grouping and spacing controls
-    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 350; // slower density increase
+    const BASE_GRAVITY_START = 0.42;
+    const MAX_GRAVITY = 1.05;
+    const GRAVITY_SLOW_FACTOR = 1.5;
+
+    const JUMP_VELOCITY = -12.2;
+
+    const MAX_SCORE_FOR_OBSTACLE_DENSITY = 360;
     let obstacleSpawnRate = 110;
-    const MIN_OBSTACLE_RATE = 40; // slower minimum spawn rate
-    const MIN_OBSTACLE_SPACING = 140; // pixels between last obstacle and next spawn
-
-    const GROUND_HEIGHT = 50;
-    const PLAYER_SIZE = 40;
+    const MIN_OBSTACLE_RATE = 42;
+    const MIN_OBSTACLE_SPACING = 150;
 
     let player;
     let obstacles = [];
-    let coins = [];
     let holes = [];
+    let coins = [];
     let traps = [];
     let score = 0;
-    let currentSpeed = BASE_GAME_SPEED;
-
-    let highScore = 0;
     let bestLevel = 0;
-    let playerCoins = 0;
+    let highScore = 0;
+    let currentSpeed = BASE_GAME_SPEED;
+    let isGameOver = false;
+    let isPausedForCurse = false;
+    let lastCurseThresholdAwarded = 0;
+    let obstacleSpawnTimer = 0;
+    let coinSpawnTimer = 0;
+    const COIN_SPAWN_RATE = 380;
 
+    // Upgrades (read-only here, updated from hub)
+    let playerCoins = 0;
     let timeLevel = 0;
     let hackerLevel = 0;
     let jumpLevel = 0;
@@ -648,129 +274,23 @@
 
     let isHackerAbilityReady = true;
     let hackerCooldownRemaining = 0;
-
     let isTimeAbilityReady = true;
     let timeCooldownRemaining = 0;
     let timeEffectRemaining = 0;
 
-    let isGameOver = false;
-    let isPausedForCurse = false;
-    let lastCurseThresholdAwarded = 0;
-
-    let obstacleSpawnTimer = 0;
-    let coinSpawnTimer = 0;
-    const COIN_SPAWN_RATE = 380; // slightly less frequent
-
-    // Skins
-    const SKINS = [
-      { id: 'santa',  name: 'Santa Skin',  cost: 5 },
-      { id: 'ninja',  name: 'Ninja Skin',  cost: 10 },
-      { id: 'robot',  name: 'Robot Skin',  cost: 15 },
-      { id: 'pirate', name: 'Pirate Skin', cost: 20 },
-      { id: 'alien',  name: 'Alien Skin',  cost: 25 },
-      { id: 'golden', name: 'Golden Skin', cost: 100 }
-    ];
-    let ownedSkins = { default: true, santa:false, ninja:false, robot:false, pirate:false, alien:false, golden:false };
-    let equippedSkin = 'default';
-
-    // Golden Hacker special upgrade unlocked with golden skin
     const GOLDEN_HACKER_UPGRADE = { cooldown: 10000 };
     let goldenHackerUnlocked = false;
     let goldenHackerCooldownRemaining = 0;
     let goldenHackerReady = true;
 
-    // Trap rarity and threshold
     const TRAP_SPAWN_PROBABILITY = 0.015;
     const TRAP_MIN_UI_SCORE = 250;
 
-    // Magnet settings
     const magnetForce = 0.025;
 
-    // =======================================================
-    // UPGRADES SETUP
-    // =======================================================
-    const TIME_UPGRADE = {
-      costs: [12, 20, 35],
-      cooldowns: [30000, 20000, 35000],
-      highScoreRequirement: [200, 300, 0],
-      effectDuration: [4000, 5000, 6000],
-      slowdownFactor: [0.7, 0.5, 'BASE'],
-      maxLevel: 3,
-      effect: (level) => {
-        if (level === 0) return 'Not yet purchased.';
-        const cd = TIME_UPGRADE.cooldowns[level - 1] / 1000;
-        if (level === 3) return `Cooldown: ${cd}s. Resets speed to base for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
-        const factor = TIME_UPGRADE.slowdownFactor[level-1];
-        return `Cooldown: ${cd}s. Slows speed to ${Math.floor(factor * 100)}% for ${TIME_UPGRADE.effectDuration[level-1]/1000}s.`;
-      }
-    };
-
-    const HACKER_UPGRADE = {
-      costs: [10, 25, 40],
-      cooldowns: [9000, 13000, 16000],
-      highScoreRequirement: [200, 550, 800],
-      maxLevel: 3,
-      effect: (level) => {
-        if (level === 0) return 'Not yet purchased.';
-        if (level === 1) return 'Cooldown: 9s. Bypasses 1 obstacle.';
-        if (level === 2) return 'Cooldown: 13s. Bypasses 2 obstacles.';
-        if (level === 3) return 'Cooldown: 16s. Bypasses 3 obstacles & holes.';
-      }
-    };
-
-    const JUMP_UPGRADE = {
-      costs: [20, 60],
-      highScoreRequirement: [400, 650],
-      maxLevels: [2, 3],
-      maxLevel: 2,
-      effect: (level) => {
-        if (level === 0) return 'Standard single jump.';
-        if (level === 1) return `Double Jump (${JUMP_UPGRADE.maxLevels[0]} jumps).`;
-        if (level === 2) return `Triple Jump (${JUMP_UPGRADE.maxLevels[1]} jumps).`;
-      }
-    };
-
-    const MAGNET_UPGRADE = {
-      costs: [40, 80],
-      highScoreRequirement: [300, 800],
-      values: [2, 3],
-      radii: [150, 300],
-      maxLevel: 2,
-      effect: (level) => {
-        if (level === 0) return 'No magnet. Coins worth 1.';
-        if (level === 1) return 'Magnet active. Coins worth 2x.';
-        if (level === 2) return 'Strong magnet. Coins worth 3x.';
-      }
-    };
-
-    const CURSE_BENDER_UPGRADE = {
-      costs: [50, 100, 150],
-      highScoreRequirement: [200, 400, 600],
-      maxLevel: 3,
-      effect: (level) => {
-        if (level === 0) return 'No curse protection.';
-        if (level === 1) return 'Blocks Very Horrible curses.';
-        if (level === 2) return 'Blocks Horrible curses.';
-        if (level === 3) return 'Blocks Bad curses.';
-      }
-    };
-
-    const UPGRADES = { time: TIME_UPGRADE, hacker: HACKER_UPGRADE, jump: JUMP_UPGRADE, magnet: MAGNET_UPGRADE, curseBender: CURSE_BENDER_UPGRADE };
-
-    // =======================================================
-    // CURSE SYSTEM
-    // =======================================================
-    const CURSE_RATING_CLASS = {
-      'Not so bad': 'badge badge-not',
-      'Bad': 'badge badge-bad',
-      'Horrible': 'badge badge-horrible',
-      'Very Horrible': 'badge badge-very'
-    };
-
+    // Curses
     let activeCurses = [];
     let curseTimers = {};
-
-    // Effects toggles
     let curseFogActive = false;
     let curseCoinTaxActive = false;
     let curseSlipActive = false;
@@ -784,10 +304,124 @@
     let cursePermanentGravityBoost = 0;
     let curseCoinDrainActive = false;
     let curseSpeedSurgeActive = false;
-
     const blindBar = { x: 0, w: 80 };
     let coinDrainTimer = 0;
 
+    // Skins
+    const SKINS = [
+      { id: 'default', name: 'Default', cost: 0 },
+      { id: 'santa',  name: 'Santa',   cost: 5 },
+      { id: 'ninja',  name: 'Ninja',   cost: 10 },
+      { id: 'robot',  name: 'Robot',   cost: 15 },
+      { id: 'pirate', name: 'Pirate',  cost: 20 },
+      { id: 'alien',  name: 'Alien',   cost: 25 },
+      { id: 'golden', name: 'Golden',  cost: 100 }
+    ];
+    let ownedSkins = { default: true };
+    let equippedSkin = 'default';
+
+    // -------------------------------------------------------
+    // UI Elements
+    // -------------------------------------------------------
+    const accountUsernameEl = document.getElementById('account-username');
+    const accountCoinsEl = document.getElementById('account-coins');
+    const accountHighEl = document.getElementById('account-highscore');
+
+    const uiScoreEl = document.getElementById('ui-score');
+    const uiHighEl = document.getElementById('ui-high');
+    const uiCoinsEl = document.getElementById('ui-coins');
+    const uiBestEl = document.getElementById('ui-best');
+
+    const timeLevelEl = document.getElementById('time-level');
+    const hackerLevelEl = document.getElementById('hacker-level');
+    const jumpLevelEl = document.getElementById('jump-level');
+    const magnetLevelEl = document.getElementById('magnet-level');
+    const curseBenderLevelEl = document.getElementById('curseBender-level');
+
+    const timeEffectEl = document.getElementById('time-effect');
+    const hackerEffectEl = document.getElementById('hacker-effect');
+    const jumpEffectEl = document.getElementById('jump-effect');
+    const magnetEffectEl = document.getElementById('magnet-effect');
+    const curseBenderEffectEl = document.getElementById('curseBender-effect');
+
+    const skinsListEl = document.getElementById('skins-list');
+
+    const btnJump = document.getElementById('btn-jump');
+    const btnCrouch = document.getElementById('btn-crouch');
+    const btnHacker = document.getElementById('btn-hacker');
+    const btnTime = document.getElementById('btn-time');
+    const btnGolden = document.getElementById('btn-golden');
+
+    const hackerOverlay = document.getElementById('hacker-overlay');
+    const hackerText = document.getElementById('hacker-text');
+    const timeOverlay = document.getElementById('time-overlay');
+    const timeText = document.getElementById('time-text');
+    const goldOverlay = document.getElementById('gold-overlay');
+    const goldText = document.getElementById('gold-text');
+
+    const gameOverBackdrop = document.getElementById('game-over-backdrop');
+    const finalScoreEl = document.getElementById('final-score');
+
+    const curseBackdrop = document.getElementById('curse-backdrop');
+    const curseOptionsEl = document.getElementById('curse-options');
+
+    const restartBtn = document.getElementById('restart-btn');
+    const quitBtn = document.getElementById('quit-btn');
+    const tryAgainBtn = document.getElementById('btn-try-again');
+
+    // -------------------------------------------------------
+    // Upgrade info (read-only text)
+    // -------------------------------------------------------
+    const TIME_UPGRADE = {
+      cooldowns: [30000, 20000, 35000],
+      effectDuration: [4000, 5000, 6000],
+      slowdownFactor: [0.7, 0.5, 'BASE'],
+      effect: (lvl) => {
+        if (lvl === 0) return 'Effect: Not yet purchased.';
+        const cd = TIME_UPGRADE.cooldowns[lvl - 1] / 1000;
+        if (lvl === 3) return `Cooldown: ${cd}s. Resets speed to base for ${TIME_UPGRADE.effectDuration[lvl-1]/1000}s.`;
+        const factor = TIME_UPGRADE.slowdownFactor[lvl-1];
+        return `Cooldown: ${cd}s. Slows speed to ${Math.floor(factor * 100)}% for ${TIME_UPGRADE.effectDuration[lvl-1]/1000}s.`;
+      }
+    };
+    const HACKER_UPGRADE = {
+      cooldowns: [9000, 13000, 16000],
+      effect: (lvl) => {
+        if (lvl === 0) return 'Effect: Not yet purchased.';
+        if (lvl === 1) return 'Cooldown: 9s. Bypasses 1 obstacle.';
+        if (lvl === 2) return 'Cooldown: 13s. Bypasses 2 obstacles.';
+        if (lvl === 3) return 'Cooldown: 16s. Bypasses 3 obstacles & holes.';
+      }
+    };
+    const JUMP_UPGRADE = {
+      maxLevels: [2, 3],
+      effect: (lvl) => {
+        if (lvl === 0) return 'Standard single jump.';
+        if (lvl === 1) return `Double Jump (${JUMP_UPGRADE.maxLevels[0]} jumps).`;
+        if (lvl === 2) return `Triple Jump (${JUMP_UPGRADE.maxLevels[1]} jumps).`;
+      }
+    };
+    const MAGNET_UPGRADE = {
+      values: [2, 3],
+      radii: [150, 300],
+      effect: (lvl) => {
+        if (lvl === 0) return 'No magnet. Coins worth 1.';
+        if (lvl === 1) return 'Magnet active. Coins worth 2x.';
+        if (lvl === 2) return 'Strong magnet. Coins worth 3x.';
+      }
+    };
+    const CURSE_BENDER_UPGRADE = {
+      effect: (lvl) => {
+        if (lvl === 0) return 'No curse protection.';
+        if (lvl === 1) return 'Blocks Very Horrible curses.';
+        if (lvl === 2) return 'Blocks Horrible curses.';
+        if (lvl === 3) return 'Blocks Bad curses.';
+      }
+    };
+
+    // -------------------------------------------------------
+    // Curses definitions
+    // -------------------------------------------------------
     const CURSES = [
       // Not so bad
       { id: 'fog', name: 'Foggy Vision', rating: 'Not so bad', duration: 30000,
@@ -858,13 +492,16 @@
       }
     ];
 
-    function pickRandomCurses(count = 3) {
+    function filteredCursePool() {
       let pool = [...CURSES];
-      // Apply Curse Bender filtering
       if (curseBenderLevel >= 1) pool = pool.filter(c => c.rating !== 'Very Horrible');
       if (curseBenderLevel >= 2) pool = pool.filter(c => c.rating !== 'Horrible');
       if (curseBenderLevel >= 3) pool = pool.filter(c => c.rating !== 'Bad');
+      return pool;
+    }
 
+    function pickRandomCurses(count = 3) {
+      let pool = filteredCursePool();
       const picks = [];
       for (let i = 0; i < count && pool.length > 0; i++) {
         const idx = Math.floor(Math.random() * pool.length);
@@ -882,42 +519,35 @@
       return picks;
     }
 
-    function showCurseChoice() {
+    function showCurseModal() {
       isPausedForCurse = true;
-      curseModal.style.display = 'flex';
-      curseOptionsContainer.innerHTML = '';
+      curseBackdrop.style.display = 'flex';
+      curseOptionsEl.innerHTML = '';
       const options = pickRandomCurses(3);
-      options.forEach(curse => {
-        const card = document.createElement('div');
-        card.className = 'bg-[#1b2c4a] p-4 rounded-lg border-2 border-[#1c305c] flex flex-col justify-between';
-        const badgeClass = CURSE_RATING_CLASS[curse.rating] || 'badge';
-        card.innerHTML = `
-          <div>
-            <div class="flex items-center justify-between">
-              <h4 class="text-xl font-bold text-white">${curse.name}</h4>
-              <span class="${badgeClass}">${curse.rating}</span>
-            </div>
-            <p class="text-sm text-gray-300 mt-2">${curse.description}</p>
-            <p class="text-xs text-gray-400 mt-1">${curse.duration ? `Duration: ${Math.floor(curse.duration/1000)}s` : 'Permanent'}</p>
+      options.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'curse-card';
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h4>${c.name}</h4>
+            <div class="badge"><span class="dot" style="background:${c.rating==='Not so bad'?'#10b981':c.rating==='Bad'?'#f59e0b':c.rating==='Horrible'?'#ef4444':'#7c3aed'}"></span>${c.rating}</div>
           </div>
-          <button class="mt-4 bg-[#e94560] hover:bg-[#d53e54] text-white font-bold py-2 px-4 rounded-lg">Choose</button>
+          <p class="hint">${c.description}</p>
+          <p class="hint">${c.duration ? 'Duration: ' + Math.floor(c.duration/1000) + 's' : 'Permanent'}</p>
+          <button class="btn-main btn-accent">Choose</button>
         `;
-        const btn = card.querySelector('button');
-        btn.addEventListener('click', () => applyCurseAndResume(curse));
-        curseOptionsContainer.appendChild(card);
+        const btn = div.querySelector('button');
+        btn.addEventListener('click', () => applyCurse(c));
+        curseOptionsEl.appendChild(div);
       });
     }
 
-    function applyCurseAndResume(curse) {
+    function applyCurse(curse) {
       curse.apply();
       const now = performance.now();
-      activeCurses.push({
-        id: curse.id, name: curse.name, rating: curse.rating,
-        expiresAt: curse.duration ? now + curse.duration : null
-      });
+      activeCurses.push({ id: curse.id, name: curse.name, rating: curse.rating, expiresAt: curse.duration ? now + curse.duration : null });
       if (curse.duration) curseTimers[curse.id] = curse.duration;
 
-      // Clear all world objects immediately after choosing a curse
       obstacles = [];
       holes = [];
       traps = [];
@@ -925,88 +555,45 @@
       obstacleSpawnTimer = 0;
       coinSpawnTimer = 0;
 
-      resumeAfterCurse();
-    }
-
-    function resumeAfterCurse() {
-      curseModal.style.display = 'none';
+      curseBackdrop.style.display = 'none';
       isPausedForCurse = false;
       lastCurseThresholdAwarded = Math.floor((score/10) / 100) * 100;
-      if (!animationFrameId && currentScreen === 'game' && !isGameOver) {
-        lastTime = 0;
-        animationFrameId = requestAnimationFrame(gameLoop);
-      }
     }
 
-    function updateCurses(deltaTime) {
+    function updateCurses(delta) {
       if (activeCurses.length === 0 && !curseCoinDrainActive && !curseSlipActive) return;
       const now = performance.now();
       for (let i = activeCurses.length - 1; i >= 0; i--) {
         const c = activeCurses[i];
         if (c.expiresAt && now >= c.expiresAt) {
-          const curseDef = CURSES.find(x => x.id === c.id);
-          if (curseDef && curseDef.cleanup) curseDef.cleanup();
+          const def = CURSES.find(x => x.id === c.id);
+          if (def && def.cleanup) def.cleanup();
           delete curseTimers[c.id];
           activeCurses.splice(i, 1);
         } else if (c.expiresAt) {
-          curseTimers[c.id] = Math.max(0, curseTimers[c.id] - deltaTime);
+          curseTimers[c.id] = Math.max(0, curseTimers[c.id] - delta);
         }
       }
       if (curseCoinDrainActive) {
-        coinDrainTimer += deltaTime;
+        coinDrainTimer += delta;
         if (coinDrainTimer >= 5000) {
           coinDrainTimer = 0;
           if (playerCoins > 0) {
             playerCoins -= 1;
-            coinCountElement.textContent = playerCoins;
-            persistUserData();
+            uiCoinsEl.textContent = playerCoins;
+            saveBackToHub();
           }
         }
       }
       if (curseSlipActive) {
-        slipTimer -= deltaTime;
+        slipTimer -= delta;
         if (slipTimer <= 0) { curseSlipActive = false; slipTimer = 0; }
       }
     }
 
-    // =======================================================
-    // UI ELEMENTS
-    // =======================================================
-    const scoreElement = document.getElementById('current-score');
-    const highScoreElement = document.getElementById('high-score');
-    const finalScoreElement = document.getElementById('final-score');
-    const coinCountElement = document.getElementById('coin-count');
-    const shopCoinCountElement = document.getElementById('shop-coin-count');
-    const shopHighScoreElement = document.getElementById('shop-high-score');
-
-    const hackerButton = document.getElementById('hacker-button');
-    const hackerCooldownOverlay = document.getElementById('hacker-cooldown-overlay');
-    const hackerCooldownText = document.getElementById('hacker-cooldown-text');
-
-    const timeButton = document.getElementById('time-button');
-    const timeCooldownOverlay = document.getElementById('time-cooldown-overlay');
-    const timeCooldownText = document.getElementById('time-cooldown-text');
-
-    const goldenHackerButton = document.getElementById('golden-hacker-button');
-    const goldenHackerCooldownOverlay = document.getElementById('golden-hacker-cooldown-overlay');
-    const goldenHackerCooldownText = document.getElementById('golden-hacker-cooldown-text');
-
-    // =======================================================
-    // UTILS: DYNAMIC GRAVITY
-    // =======================================================
-    function getDynamicGravity(multiplier = 1) {
-      const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
-      let baseSpeedAdj = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
-      const speedFactor = Math.min((currentSpeed - baseSpeedAdj) / ((maxSpeed - baseSpeedAdj) * GRAVITY_SLOW_FACTOR), 1);
-      const gravityBase = BASE_GRAVITY_START + cursePermanentGravityBoost;
-      let gravity = gravityBase + (MAX_GRAVITY - gravityBase) * Math.max(0, speedFactor);
-      if (curseDoubleGravityActive) gravity *= 2;
-      return gravity * multiplier;
-    }
-
-    // =======================================================
-    // SKIN RENDER HELPERS
-    // =======================================================
+    // -------------------------------------------------------
+    // Drawing helpers: stickman skins
+    // -------------------------------------------------------
     const DEFAULT_GOLD = '#f4c542';
     const NINJA_BAND_RED = '#d81e1e';
     const ALIEN_GREEN = '#00ff00';
@@ -1023,21 +610,26 @@
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
       ctx.lineCap = 'round';
-      // Head
       ctx.beginPath(); ctx.arc(x + w / 2, y + 5, 6, 0, Math.PI * 2); ctx.stroke();
-      // Body
       const bodyTop = y + 12;
       const bodyBottom = y + h - 10;
       ctx.beginPath(); ctx.moveTo(x + w / 2, bodyTop); ctx.lineTo(x + w / 2, bodyBottom); ctx.stroke();
-      // Arms
       ctx.beginPath(); ctx.moveTo(x, y + (h/2 - 5)); ctx.lineTo(x + w, y + (h/2 - 5)); ctx.stroke();
-      // Legs
       ctx.beginPath();
       ctx.moveTo(x + w / 2, bodyBottom); ctx.lineTo(x, y + h);
       ctx.moveTo(x + w / 2, bodyBottom); ctx.lineTo(x + w, y + h);
       ctx.stroke();
     }
-
+    function drawDefault(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, DEFAULT_GOLD, 3.5); }
+    function drawGolden(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, GOLDEN_LINE, 3.5); }
+    function drawAlien(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, ALIEN_GREEN, 3.5); }
+    function drawRobot(ctx, x, y, w, h) {
+      drawStickmanLines(ctx, x, y, w, h, ROBOT_GRAY, 3.5);
+      const hx = x + w/2, hy = y + 5;
+      ctx.fillStyle = ROBOT_EYE_CYAN;
+      ctx.beginPath(); ctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
+    }
     function drawNinja(ctx, x, y, w, h) {
       drawStickmanLines(ctx, x, y, w, h, '#000000', 3.5);
       const cx = x + w/2, cy = y + 5, r = 6;
@@ -1052,14 +644,6 @@
       ctx.quadraticCurveTo(x + w/2 - r - 12, cy - 6, x + w/2 - r - 18, cy - 2);
       ctx.quadraticCurveTo(x + w/2 - r - 10, cy + 6, x + w/2 - r - 18, cy + 10);
       ctx.stroke();
-    }
-    function drawAlien(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, ALIEN_GREEN, 3.5); }
-    function drawRobot(ctx, x, y, w, h) {
-      drawStickmanLines(ctx, x, y, w, h, ROBOT_GRAY, 3.5);
-      const hx = x + w/2, hy = y + 5;
-      ctx.fillStyle = ROBOT_EYE_CYAN;
-      ctx.beginPath(); ctx.ellipse(hx - 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(hx + 3, hy, 2, 3, 0, 0, Math.PI*2); ctx.fill();
     }
     function drawPirate(ctx, x, y, w, h) {
       drawStickmanLines(ctx, x, y, w, h, PIRATE_BLACK, 3.5);
@@ -1095,23 +679,21 @@
       ctx.fillStyle = SANTA_WHITE; ctx.fillRect(hx - 12, hy, 24, 3);
       ctx.beginPath(); ctx.arc(hx + 12, hy - 4, 3, 0, Math.PI*2); ctx.fill();
     }
-    function drawGolden(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, GOLDEN_LINE, 3.5); }
-    function drawDefault(ctx, x, y, w, h) { drawStickmanLines(ctx, x, y, w, h, DEFAULT_GOLD, 3.5); }
 
-    // =======================================================
-    // CLASSES
-    // =======================================================
+    // -------------------------------------------------------
+    // Classes
+    // -------------------------------------------------------
     class Player {
       constructor() {
         this.width = PLAYER_SIZE / 2;
         this.height = PLAYER_SIZE;
-        this.x = 50;
+        this.x = 52;
         this.y = canvas.height - GROUND_HEIGHT - this.height;
-        this.velocityY = 0;
+        this.vy = 0;
         this.isCrouching = false;
         this.skin = equippedSkin;
       }
-      setSkin(skinName) { this.skin = skinName; }
+      setSkin(name) { this.skin = name; }
       crouch(on) {
         this.isCrouching = on;
         const targetHeight = on ? PLAYER_SIZE / 2 : PLAYER_SIZE;
@@ -1131,7 +713,7 @@
           if (jumpLevel === 1) maxJumps = JUMP_UPGRADE.maxLevels[0];
           if (jumpLevel === 2) maxJumps = JUMP_UPGRADE.maxLevels[1];
           if (jumpCount < maxJumps) {
-            this.velocityY = JUMP_VELOCITY;
+            this.vy = JUMP_VELOCITY;
             jumpCount++;
           }
         }
@@ -1157,9 +739,9 @@
         this.color = '#FFD700';
         this.baseValue = 1;
         const level = Math.floor(Math.random() * 3);
-        if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.5;
-        else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.5;
-        else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.5;
+        if (level === 0) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 3.7;
+        else if (level === 1) this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 1.6;
+        else this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 0.6;
       }
       update(speed) { this.x -= speed; }
       draw() {
@@ -1185,9 +767,8 @@
           this.height = 15;
           this.width = 40 + Math.random() * 30;
           this.x = canvas.width;
-          // Spawn air obstacles a bit higher and ensure spacing from last ground obstacle
           this.y = canvas.height - GROUND_HEIGHT - PLAYER_SIZE * 2.8 - Math.random() * 60;
-          this.vy = 0.25; // slightly slower drift
+          this.vy = 0.25;
         }
       }
       update(speed) {
@@ -1211,8 +792,8 @@
         const baseWidth = 75;
         const randomExtra = Math.random() * 75;
         const uiScore = Math.floor(score / 10);
-        const scaling = Math.min(uiScore / 220, 3); // slightly slower widening
-        this.width = Math.min((baseWidth + randomExtra) * (1 + scaling * 0.25), 200); // clamp to prevent phantom falls
+        const scaling = Math.min(uiScore / 220, 3);
+        this.width = Math.min((baseWidth + randomExtra) * (1 + scaling * 0.25), 200);
         this.x = canvas.width;
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
@@ -1240,9 +821,8 @@
         this.y = canvas.height - GROUND_HEIGHT;
         this.height = GROUND_HEIGHT;
         this.isTriggered = false;
-        // Floor-like color to stay hidden
-        this.color = '#2d3748'; // same as ground
-        this.tintAlpha = 0.04;   // very subtle tint
+        this.color = '#2d3748';
+        this.tintAlpha = 0.04;
         this.animationProgress = 0;
       }
       update(speed) {
@@ -1252,25 +832,18 @@
         }
       }
       draw() {
-        // Base: looks like ground segment
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
-
-        // If not triggered, keep spikes hidden (flat)
         if (!this.isTriggered) {
-          // very subtle hint
           ctx.fillStyle = `rgba(255,0,0,${this.tintAlpha})`;
           ctx.fillRect(this.x, this.y, this.width, this.height);
           return;
         }
-
-        // When triggered (stepped on), pop spikes animation
         const spikeHeight = 20;
         const spikeWidth = 6;
         const spacing = 20;
         const numSpikes = Math.floor(this.width / spacing);
-        const baseY = this.y; // from floor level
-
+        const baseY = this.y;
         for (let i = 0; i < numSpikes; i++) {
           const baseX = this.x + i * spacing + 5;
           const rise = spikeHeight * this.animationProgress;
@@ -1285,14 +858,13 @@
       }
     }
 
-    // =======================================================
-    // ABILITIES
-    // =======================================================
+    // -------------------------------------------------------
+    // Abilities
+    // -------------------------------------------------------
     function activateHackerAbility() {
       if (hackerLevel === 0 || !isHackerAbilityReady || isGameOver || isPausedForCurse) return;
       isHackerAbilityReady = false;
-      const currentCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
-      hackerCooldownRemaining = currentCooldown;
+      hackerCooldownRemaining = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
 
       let bypassCount = 1;
       if (hackerLevel === 2) bypassCount = 2;
@@ -1320,8 +892,7 @@
     function activateTimeAbility() {
       if (timeLevel === 0 || !isTimeAbilityReady || isGameOver || isPausedForCurse) return;
       isTimeAbilityReady = false;
-      const currentCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
-      timeCooldownRemaining = currentCooldown;
+      timeCooldownRemaining = TIME_UPGRADE.cooldowns[timeLevel - 1];
       const factor = TIME_UPGRADE.slowdownFactor[timeLevel - 1];
       currentSpeed = factor === 'BASE' ? BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0) : currentSpeed * factor;
       timeEffectRemaining = TIME_UPGRADE.effectDuration[timeLevel - 1];
@@ -1339,100 +910,65 @@
         target.isBypassed = true;
         target.color = '#FFD700';
         playerCoins += 2;
-        coinCountElement.textContent = playerCoins;
-        persistUserData();
+        uiCoinsEl.textContent = playerCoins;
+        saveBackToHub();
       }
       updateGoldenHackerButtonUI();
     }
 
     function updateHackerButtonUI() {
       if (hackerLevel === 0) {
-        hackerButton.disabled = true;
-        hackerCooldownText.textContent = 'BUY IN SHOP';
-        hackerCooldownOverlay.style.height = '100%';
-        return;
+        btnHacker.disabled = true; hackerText.textContent = 'Hacker: Buy in Shop'; hackerOverlay.style.height = '100%'; return;
       }
       if (isHackerAbilityReady && !isPausedForCurse) {
-        hackerButton.disabled = false;
-        hackerCooldownText.textContent = 'READY (X)';
-        hackerCooldownOverlay.style.height = '0%';
-        hackerButton.classList.remove('bg-gray-700');
-        hackerButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+        btnHacker.disabled = false; hackerText.textContent = 'Hacker READY (X)'; hackerOverlay.style.height = '0%';
       } else {
-        hackerButton.disabled = true;
-        hackerButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
-        hackerButton.classList.add('bg-gray-700');
-        const totalCooldown = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
+        btnHacker.disabled = true;
+        const total = HACKER_UPGRADE.cooldowns[hackerLevel - 1];
         const remainingSec = Math.ceil(hackerCooldownRemaining / 1000);
-        const percent = (hackerCooldownRemaining / totalCooldown) * 100;
-        hackerCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
-        hackerCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
+        const percent = (hackerCooldownRemaining / total) * 100;
+        hackerText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        hackerOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
-
     function updateTimeButtonUI() {
-      if (timeLevel === 0) {
-        timeButton.disabled = true;
-        timeCooldownText.textContent = 'BUY IN SHOP';
-        timeCooldownOverlay.style.height = '100%';
-        return;
-      }
+      if (timeLevel === 0) { btnTime.disabled = true; timeText.textContent = 'Time Warp: Buy'; timeOverlay.style.height = '100%'; return; }
       if (timeEffectRemaining > 0) {
-        timeButton.disabled = true;
-        const remainingEffectSec = Math.ceil(timeEffectRemaining / 1000);
-        timeCooldownText.textContent = `WARP: ${remainingEffectSec}s`;
-        timeCooldownOverlay.style.height = '0%';
-        timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-gray-700');
-        timeButton.classList.add('bg-blue-800');
+        btnTime.disabled = true;
+        const remainingSec = Math.ceil(timeEffectRemaining / 1000);
+        timeText.textContent = `WARP: ${remainingSec}s`;
+        timeOverlay.style.height = '0%';
         return;
       }
       if (isTimeAbilityReady && !isPausedForCurse) {
-        timeButton.disabled = false;
-        timeCooldownText.textContent = 'READY (T)';
-        timeCooldownOverlay.style.height = '0%';
-        timeButton.classList.remove('bg-gray-700');
-        timeButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        btnTime.disabled = false; timeText.textContent = 'Time READY (T)'; timeOverlay.style.height = '0%';
       } else {
-        timeButton.disabled = true;
-        timeButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        timeButton.classList.add('bg-gray-700');
-        const totalCooldown = TIME_UPGRADE.cooldowns[timeLevel - 1];
+        btnTime.disabled = true;
+        const total = TIME_UPGRADE.cooldowns[timeLevel - 1];
         const remainingSec = Math.ceil(timeCooldownRemaining / 1000);
-        const percent = (timeCooldownRemaining / totalCooldown) * 100;
-        timeCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
-        timeCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
+        const percent = (timeCooldownRemaining / total) * 100;
+        timeText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        timeOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
-
     function updateGoldenHackerButtonUI() {
-      if (!goldenHackerUnlocked) {
-        goldenHackerButton.disabled = true;
-        goldenHackerCooldownText.textContent = 'BUY GOLDEN SKIN';
-        goldenHackerCooldownOverlay.style.height = '100%';
-        return;
-      }
+      if (!goldenHackerUnlocked) { btnGolden.disabled = true; goldText.textContent = 'Golden: Buy Golden Skin'; goldOverlay.style.height = '100%'; return; }
       if (goldenHackerReady && !isPausedForCurse) {
-        goldenHackerButton.disabled = false;
-        goldenHackerCooldownText.textContent = 'READY (G)';
-        goldenHackerCooldownOverlay.style.height = '0%';
-        goldenHackerButton.classList.remove('bg-gray-700');
-        goldenHackerButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+        btnGolden.disabled = false; goldText.textContent = 'Golden READY (G)'; goldOverlay.style.height = '0%';
       } else {
-        goldenHackerButton.disabled = true;
-        goldenHackerButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-        goldenHackerButton.classList.add('bg-gray-700');
-        const totalCd = GOLDEN_HACKER_UPGRADE.cooldown;
+        btnGolden.disabled = true;
+        const total = GOLDEN_HACKER_UPGRADE.cooldown;
         const remainingSec = Math.ceil(goldenHackerCooldownRemaining / 1000);
-        const percent = (goldenHackerCooldownRemaining / totalCd) * 100;
-        goldenHackerCooldownText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
-        goldenHackerCooldownOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
+        const percent = (goldenHackerCooldownRemaining / total) * 100;
+        goldText.textContent = isPausedForCurse ? 'PAUSED' : `${remainingSec}s`;
+        goldOverlay.style.height = isPausedForCurse ? '100%' : `${percent}%`;
       }
     }
 
-    // =======================================================
-    // INPUT
-    // =======================================================
-    function handleInput() {
+    // -------------------------------------------------------
+    // Input
+    // -------------------------------------------------------
+    function bindInput() {
       document.addEventListener('keydown', (e) => {
         if (!isGameOver && !isPausedForCurse) {
           if (e.code === 'Space' || e.code === 'Enter') player.jump();
@@ -1442,33 +978,33 @@
           if (e.key === 'ArrowDown' || e.key === 's') player.crouch(true);
         }
       });
-      document.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowDown' || e.key === 's') player.crouch(false);
-      });
-
-      document.getElementById('jump-button').addEventListener('click', () => { if (!isGameOver && !isPausedForCurse) player.jump(); });
-
-      const crouchButton = document.getElementById('crouch-button');
-      crouchButton.addEventListener('mousedown', () => !isPausedForCurse && player.crouch(true));
-      crouchButton.addEventListener('mouseup', () => player.crouch(false));
-      crouchButton.addEventListener('mouseleave', () => player.crouch(false));
-      crouchButton.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isPausedForCurse) player.crouch(true); });
-      crouchButton.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
+      document.addEventListener('keyup', (e) => { if (e.key === 'ArrowDown' || e.key === 's') player.crouch(false); });
+      btnJump.addEventListener('click', () => { if (!isGameOver && !isPausedForCurse) player.jump(); });
+      btnCrouch.addEventListener('mousedown', () => !isPausedForCurse && player.crouch(true));
+      btnCrouch.addEventListener('mouseup', () => player.crouch(false));
+      btnCrouch.addEventListener('mouseleave', () => player.crouch(false));
+      btnCrouch.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isPausedForCurse) player.crouch(true); });
+      btnCrouch.addEventListener('touchend', (e) => { e.preventDefault(); player.crouch(false); });
 
       canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (!isGameOver && !isPausedForCurse) player.jump(); });
+
+      btnHacker.addEventListener('click', activateHackerAbility);
+      btnTime.addEventListener('click', activateTimeAbility);
+      btnGolden.addEventListener('click', activateGoldenHacker);
+
+      restartBtn.addEventListener('click', () => { startGame(); });
+      tryAgainBtn.addEventListener('click', () => { startGame(); });
+      quitBtn.addEventListener('click', () => { window.location.href = 'index.html'; });
     }
 
-    // =======================================================
-    // SPAWN & BALANCE HELPERS
-    // =======================================================
+    // -------------------------------------------------------
+    // Spawn helpers
+    // -------------------------------------------------------
     function lastObstacleX() {
       if (obstacles.length === 0) return -Infinity;
       return obstacles[obstacles.length - 1].x;
     }
-    function canSpawnObstacle() {
-      // Ensure minimum spacing from last obstacle
-      return (canvas.width - lastObstacleX()) > MIN_OBSTACLE_SPACING;
-    }
+    function canSpawnObstacle() { return (canvas.width - lastObstacleX()) > MIN_OBSTACLE_SPACING; }
     function closestGroundObstacleDistance() {
       let minDist = Infinity;
       for (const o of obstacles) {
@@ -1479,10 +1015,7 @@
       }
       return minDist;
     }
-    function canSpawnAirObstacleFarFromGround(threshold = 220) {
-      // ensure blue flying obstacles spawn far from recent red blocks
-      return closestGroundObstacleDistance() > threshold;
-    }
+    function canSpawnAirObstacleFarFromGround(threshold = 220) { return closestGroundObstacleDistance() > threshold; }
     function canSpawnTrapFarFromObstacles(threshold = 260) {
       for (const o of obstacles) {
         const dist = canvas.width - o.x;
@@ -1491,82 +1024,53 @@
       return true;
     }
 
-    // =======================================================
-    // SHOP LOGIC
-    // =======================================================
-    function buyUpgrade(upgradeName) {
-      const upgrade = UPGRADES[upgradeName];
-      const currentLevel = getUpgradeLevel(upgradeName);
-      if (currentLevel < upgrade.maxLevel) {
-        const cost = upgrade.costs[currentLevel];
-        const requiredScore = upgrade.highScoreRequirement[currentLevel];
-        if (highScore < requiredScore) { alert(`High Score of ${requiredScore} required.`); return; }
-        if (playerCoins >= cost) {
-          playerCoins -= cost;
-          const newLevel = currentLevel + 1;
-          setUpgradeLevel(upgradeName, newLevel);
-          coinCountElement.textContent = playerCoins;
-          updateShopUI();
-          persistUserData();
-          if (upgradeName === 'hacker') updateHackerButtonUI();
-          if (upgradeName === 'time') updateTimeButtonUI();
-        } else {
-          alert('Not enough coins.');
-        }
-      }
-    }
-    function getUpgradeLevel(key) {
-      if (key === 'time') return timeLevel;
-      if (key === 'hacker') return hackerLevel;
-      if (key === 'jump') return jumpLevel;
-      if (key === 'magnet') return magnetLevel;
-      if (key === 'curseBender') return curseBenderLevel;
-      return 0;
-    }
-    function setUpgradeLevel(key, level) {
-      if (key === 'time') timeLevel = level;
-      if (key === 'hacker') hackerLevel = level;
-      if (key === 'jump') jumpLevel = level;
-      if (key === 'magnet') magnetLevel = level;
-      if (key === 'curseBender') curseBenderLevel = level;
-    }
+    // -------------------------------------------------------
+    // Shop reflection UI
+    // -------------------------------------------------------
+    function updateShopReflection() {
+      timeLevelEl.textContent = timeLevel;
+      hackerLevelEl.textContent = hackerLevel;
+      jumpLevelEl.textContent = jumpLevel;
+      magnetLevelEl.textContent = magnetLevel;
+      curseBenderLevelEl.textContent = curseBenderLevel;
 
-    // Skins UI (with previews)
-    function updateSkinsUI() {
-      const skinsList = document.getElementById('skins-list');
-      skinsList.innerHTML = '';
+      timeEffectEl.textContent = TIME_UPGRADE.effect(timeLevel);
+      hackerEffectEl.textContent = HACKER_UPGRADE.effect(hackerLevel);
+      jumpEffectEl.textContent = JUMP_UPGRADE.effect(jumpLevel);
+      magnetEffectEl.textContent = MAGNET_UPGRADE.effect(magnetLevel);
+      curseBenderEffectEl.textContent = CURSE_BENDER_UPGRADE.effect(curseBenderLevel);
+
+      skinsListEl.innerHTML = '';
       SKINS.forEach(skin => {
-        const owned = ownedSkins[skin.id];
+        const owned = !!ownedSkins[skin.id];
         const equipped = equippedSkin === skin.id;
-        const div = document.createElement('div');
-        div.className = 'bg-[#203463] p-4 rounded-lg';
-
-        div.innerHTML = `
-          <div class="flex items-center gap-4">
-            <canvas id="preview-${skin.id}" width="60" height="80" class="skin-preview"></canvas>
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3';
+        const previewId = 'skin-' + skin.id;
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            <canvas id="${previewId}" width="60" height="80" class="skin-preview"></canvas>
             <div>
-              <p class="text-2xl font-bold">${skin.name}</p>
-              <p class="text-lg text-gray-300">Cost: ${skin.cost} Coins</p>
-              <p class="text-lg">Owned: <span class="font-bold ${owned ? 'text-green-400' : 'text-red-400'}">${owned ? 'Yes' : 'No'}</span></p>
-              <p class="text-lg">Equipped: <span class="font-bold ${equipped ? 'text-green-400' : 'text-red-400'}">${equipped ? 'Yes' : 'No'}</span></p>
+              <div class="font-bold">${skin.name}</div>
+              <div class="hint">Owned: <span class="${owned?'text-green-300':'text-red-300'}">${owned?'Yes':'No'}</span> | Equipped: <span class="${equipped?'text-green-300':'text-red-300'}">${equipped?'Yes':'No'}</span></div>
             </div>
           </div>
-          <div class="flex gap-2 mt-3">
-            <button onclick="buySkin('${skin.id}')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full ${owned ? 'opacity-50 cursor-not-allowed' : ''}" ${owned ? 'disabled' : ''}>Buy</button>
-            <button onclick="equipSkin('${skin.id}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full ${owned ? '' : 'opacity-50 cursor-not-allowed'}" ${owned ? '' : 'disabled'}>Equip</button>
-          </div>
+          <div class="hint">Cost: ${skin.cost} coins</div>
         `;
-        skinsList.appendChild(div);
-        renderSkinPreview(skin.id);
+        skinsListEl.appendChild(row);
+        renderSkinPreview(previewId, skin.id);
       });
+
+      updateHackerButtonUI();
+      updateTimeButtonUI();
       updateGoldenHackerButtonUI();
     }
 
-    function renderSkinPreview(skinId) {
-      const canvasP = document.getElementById(`preview-${skinId}`);
-      if (!canvasP) return;
-      const pctx = canvasP.getContext('2d');
-      pctx.clearRect(0, 0, canvasP.width, canvasP.height);
+    function renderSkinPreview(canvasId, skinId) {
+      const c = document.getElementById(canvasId);
+      if (!c) return;
+      const pctx = c.getContext('2d');
+      pctx.clearRect(0,0,c.width,c.height);
       const x = 18, y = 20, w = 24, h = 36;
       const drawLines = (color) => drawStickmanLines(pctx, x, y, w, h, color, 3);
 
@@ -1635,118 +1139,39 @@
       }
       pctx.strokeStyle = '#1f2937';
       pctx.lineWidth = 1;
-      pctx.beginPath(); pctx.moveTo(8, y + h + 4); pctx.lineTo(canvasP.width - 8, y + h + 4); pctx.stroke();
+      const baseY = y + h + 4;
+      pctx.beginPath(); pctx.moveTo(8, baseY); pctx.lineTo(c.width - 8, baseY); pctx.stroke();
     }
 
-    function buySkin(skinId) {
-      const skin = SKINS.find(s => s.id === skinId);
-      if (!skin) return;
-      if (ownedSkins[skinId]) { alert('Already owned.'); return; }
-      if (playerCoins < skin.cost) { alert('Not enough coins.'); return; }
-      playerCoins -= skin.cost;
-      ownedSkins[skinId] = true;
-      coinCountElement.textContent = playerCoins;
+    // -------------------------------------------------------
+    // Game lifecycle
+    // -------------------------------------------------------
+    let animationId = null;
+    let lastTime = 0;
 
-      if (skinId === 'golden') {
-        goldenHackerUnlocked = true;
-        updateGoldenHackerButtonUI();
-      }
-
-      updateSkinsUI();
-      updateShopUI();
-      persistUserData();
-    }
-
-    function equipSkin(skinId) {
-      if (!ownedSkins[skinId]) { alert('Skin not owned.'); return; }
-      equippedSkin = skinId;
-      updateSkinsUI();
-      if (player) player.setSkin(equippedSkin);
-      persistUserData();
-    }
-
-    function updateShopUI() {
-      shopCoinCountElement.textContent = playerCoins;
-      shopHighScoreElement.textContent = highScore;
-
-      Object.keys(UPGRADES).forEach(key => {
-        const upgrade = UPGRADES[key];
-        const currentLevel = getUpgradeLevel(key);
-        const levelElement = document.getElementById(`${key}-level`);
-        const effectElement = document.getElementById(`${key}-effect`);
-        const costElement = document.getElementById(`${key}-cost`);
-        const buyButton = document.getElementById(`buy-${key}-button`);
-        const reqElement = document.getElementById(`${key}-req`);
-        if (!levelElement || !buyButton) return;
-
-        levelElement.textContent = currentLevel;
-        effectElement.textContent = upgrade.effect(currentLevel);
-
-        if (currentLevel < upgrade.maxLevel) {
-          const nextLevel = currentLevel + 1;
-          const nextCost = upgrade.costs[currentLevel];
-          const requiredScore = upgrade.highScoreRequirement[currentLevel];
-          costElement.textContent = `Cost: ${nextCost} Coins`;
-          buyButton.textContent = `Buy Level ${nextLevel}`;
-
-          let canBuy = true;
-          if (requiredScore > 0 && highScore < requiredScore) {
-            reqElement.textContent = `Required High Score: ${requiredScore} points.`;
-            reqElement.classList.remove('text-green-300'); reqElement.classList.add('text-red-300');
-            canBuy = false;
-          } else {
-            reqElement.textContent = requiredScore > 0 ? `Requirement Met (${requiredScore})` : `No High Score requirement.`;
-            reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
-          }
-          if (playerCoins < nextCost || !canBuy) {
-            buyButton.disabled = true;
-            if (playerCoins < nextCost) buyButton.textContent = 'Not Enough Coins';
-            else if (!canBuy) buyButton.textContent = 'Score Too Low';
-          } else {
-            buyButton.disabled = false;
-          }
-        } else {
-          costElement.textContent = 'MAX LEVEL';
-          buyButton.textContent = 'MAXED OUT';
-          buyButton.disabled = true;
-          reqElement.textContent = 'You have maxed out this upgrade.';
-          reqElement.classList.remove('text-red-300'); reqElement.classList.add('text-green-300');
-        }
-      });
-    }
-
-    // =======================================================
-    // GAME LOOP
-    // =======================================================
     function startGame() {
       stopGame();
-      curseModal.style.display = 'none';
-      gameOverModal.style.display = 'none';
-      isGameOver = false;
-      isPausedForCurse = false;
       score = 0;
       obstacles = [];
-      coins = [];
       holes = [];
       traps = [];
+      coins = [];
+      bestLevel = Math.max(bestLevel || 0, Math.floor(highScore || 0));
+      isGameOver = false;
+      isPausedForCurse = false;
       isFalling = false;
       obstacleSpawnTimer = 0;
       coinSpawnTimer = 0;
       currentSpeed = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
 
-      // Reset ability state
       jumpCount = 0;
       isHackerAbilityReady = true;
       hackerCooldownRemaining = 0;
       isTimeAbilityReady = true;
       timeCooldownRemaining = 0;
       timeEffectRemaining = 0;
-      if (goldenHackerUnlocked) {
-        goldenHackerReady = true;
-        goldenHackerCooldownRemaining = 0;
-      }
+      if (goldenHackerUnlocked) { goldenHackerReady = true; goldenHackerCooldownRemaining = 0; }
 
-      // Reset timed curses on new run
       activeCurses = activeCurses.filter(c => !c.expiresAt);
       curseFogActive = false;
       curseCoinTaxActive = false;
@@ -1759,106 +1184,95 @@
       curseBlindBarActive = false;
       coinDrainTimer = 0;
 
-      updateHackerButtonUI();
-      updateTimeButtonUI();
-      updateGoldenHackerButtonUI();
-
       player = new Player();
       player.setSkin(equippedSkin);
       resizeCanvas();
       canvas.style.borderColor = '#e94560';
       lastTime = 0;
-      animationFrameId = requestAnimationFrame(gameLoop);
+      gameOverBackdrop.style.display = 'none';
+      animationId = requestAnimationFrame(loop);
     }
 
     function stopGame() {
-      if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
-      persistUserData();
+      if (animationId) cancelAnimationFrame(animationId);
+      animationId = null;
+      saveBackToHub();
     }
 
-    function gameLoop(currentTime) {
+    function loop(currentTime) {
       if (!lastTime) lastTime = currentTime;
-      const deltaTime = Math.min(currentTime - lastTime, 100);
+      const delta = Math.min(currentTime - lastTime, 100);
       lastTime = currentTime;
 
       if (isGameOver) { stopGame(); return; }
-      if (isPausedForCurse) { animationFrameId = requestAnimationFrame(gameLoop); return; }
+      if (isPausedForCurse) { animationId = requestAnimationFrame(loop); return; }
 
-      update(deltaTime);
+      update(delta);
       draw();
-      animationFrameId = requestAnimationFrame(gameLoop);
+      animationId = requestAnimationFrame(loop);
     }
 
-    function update(deltaTime) {
-      // Score
-      score += deltaTime / 16; // ~60 points/sec
+    function update(delta) {
+      score += delta / 16;
       const uiScore = Math.floor(score / 10);
-      scoreElement.textContent = uiScore;
+      uiScoreEl.textContent = uiScore;
 
-      // Track best level
       bestLevel = Math.max(bestLevel, uiScore);
 
-      // Trigger curse every 100 levels (once per threshold)
       const nextThreshold = Math.floor(uiScore / 100) * 100;
       if (uiScore > 0 && uiScore % 100 === 0 && nextThreshold !== lastCurseThresholdAwarded && !isPausedForCurse) {
-        isPausedForCurse = true;
-        showCurseChoice();
+        showCurseModal();
         return;
       }
 
-      // Speed ramp (slower)
       const speedFactor = Math.min(uiScore / MAX_SCORE_FOR_SPEED, 1);
       const baseSpeedOffset = (curseSpeedSurgeActive ? 2 : 0);
       const calculatedSpeed = (BASE_GAME_SPEED + baseSpeedOffset) + (MAX_GAME_SPEED_INCREASE * speedFactor);
 
-      // Slip burst: temporarily boost world speed without moving player
       const effectiveSpeed = (timeEffectRemaining <= 0 ? calculatedSpeed : currentSpeed) * (curseSlipActive ? 1.5 : 1.0);
       if (timeEffectRemaining <= 0) { currentSpeed = calculatedSpeed; canvas.style.borderColor = '#e94560'; }
 
-      // Cooldowns/effects
       if (hackerCooldownRemaining > 0) {
-        hackerCooldownRemaining -= deltaTime;
+        hackerCooldownRemaining -= delta;
         if (hackerCooldownRemaining <= 0) { hackerCooldownRemaining = 0; isHackerAbilityReady = true; }
         updateHackerButtonUI();
       }
       if (timeCooldownRemaining > 0) {
-        timeCooldownRemaining -= deltaTime;
+        timeCooldownRemaining -= delta;
         if (timeCooldownRemaining <= 0) { timeCooldownRemaining = 0; isTimeAbilityReady = true; }
         updateTimeButtonUI();
       }
       if (timeEffectRemaining > 0) {
-        timeEffectRemaining -= deltaTime;
+        timeEffectRemaining -= delta;
         if (timeEffectRemaining <= 0) { timeEffectRemaining = 0; currentSpeed = calculatedSpeed; }
         updateTimeButtonUI();
       }
       if (goldenHackerCooldownRemaining > 0) {
-        goldenHackerCooldownRemaining -= deltaTime;
+        goldenHackerCooldownRemaining -= delta;
         if (goldenHackerCooldownRemaining <= 0) { goldenHackerCooldownRemaining = 0; goldenHackerReady = true; }
         updateGoldenHackerButtonUI();
       }
 
-      updateCurses(deltaTime);
+      updateCurses(delta);
 
-      // Player physics with dynamic gravity
       const groundY = canvas.height - GROUND_HEIGHT - player.height;
       if (!isFalling) {
-        player.velocityY += getDynamicGravity();
-        player.y += player.velocityY;
+        player.vy += getDynamicGravity();
+        player.y += player.vy;
         if (player.y >= groundY) {
-          let fallingIntoHole = false;
+          let inHole = false;
           for (const hole of holes) {
-            if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { fallingIntoHole = true; break; }
+            if (player.x + player.width > hole.x && player.x < hole.x + hole.width) { inHole = true; break; }
           }
-          if (fallingIntoHole) { isFalling = true; player.velocityY = 0; }
-          else { player.y = groundY; player.velocityY = 0; jumpCount = 0; }
+          if (inHole) { isFalling = true; player.vy = 0; }
+          else { player.y = groundY; player.vy = 0; jumpCount = 0; }
         }
       } else {
-        player.velocityY += getDynamicGravity(3);
-        player.y += player.velocityY;
-        if (player.y > canvas.height + 50) { gameOver("fall out of bounds"); return; }
+        player.vy += getDynamicGravity(3);
+        player.y += player.vy;
+        if (player.y > canvas.height + 50) { endGame('fall out of bounds'); return; }
       }
 
-      // Obstacle density ramp (slower) and spacing
       const initialRate = 110;
       const minRate = MIN_OBSTACLE_RATE;
       const difficultyFactor = Math.min(uiScore / MAX_SCORE_FOR_OBSTACLE_DENSITY, 1);
@@ -1866,40 +1280,32 @@
       obstacleSpawnRate = initialRate - rateReduction;
       if (curseObstacleFrenzyActive) obstacleSpawnRate = Math.max(minRate, obstacleSpawnRate / 2);
 
-      // Spawning with spacing rules
       obstacleSpawnTimer++;
       if (obstacleSpawnTimer >= obstacleSpawnRate && canSpawnObstacle()) {
         if (Math.random() < 0.15) {
-          // Spawn hole only if spacing allows
           holes.push(new Hole());
         } else {
-          // Ground vs air with blue-air spacing constraint
-          const spawnAir = Math.random() < 0.3; // fewer air obstacles
+          const spawnAir = Math.random() < 0.3;
           if (spawnAir && canSpawnAirObstacleFarFromGround(220)) {
-            const type = 'air';
-            obstacles.push(new Obstacle(type));
+            obstacles.push(new Obstacle('air'));
           } else {
-            const type = 'ground';
-            obstacles.push(new Obstacle(type));
+            obstacles.push(new Obstacle('ground'));
           }
         }
         obstacleSpawnTimer = 0;
       }
 
-      // Traps: rare, start at UI score ≥ 250; must be far from obstacles
       const trapProb = TRAP_SPAWN_PROBABILITY * (curseTrapStormActive ? 3 : 1);
       if (uiScore >= TRAP_MIN_UI_SCORE && Math.random() < trapProb && canSpawnTrapFarFromObstacles(260)) {
         traps.push(new Trap());
       }
 
-      // Coins spawn
       coinSpawnTimer++;
       if (coinSpawnTimer >= COIN_SPAWN_RATE) {
         if (Math.random() < 0.6) coins.push(new Coin());
         coinSpawnTimer = 0;
       }
 
-      // Magnet behavior
       if (magnetLevel > 0 && coins.length > 0) {
         const magnetRadius = MAGNET_UPGRADE.radii[magnetLevel - 1];
         const px = player.x + player.width / 2;
@@ -1916,8 +1322,7 @@
           const isOverheadX = (coin.x + coin.size > player.x) && (coin.x < player.x + player.width);
           const isHigherY = coin.y < player.y + player.height / 2;
 
-          const shouldZip = magnetLevel === 2
-            ? (distance <= magnetRadius)
+          const shouldZip = magnetLevel === 2 ? (distance <= magnetRadius)
             : (distance <= magnetRadius && isOverheadX && isHigherY);
 
           if (shouldZip) {
@@ -1929,9 +1334,9 @@
               else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1];
               if (curseCoinTaxActive) value = Math.max(0, Math.floor(value * 0.5));
               playerCoins += value;
-              coinCountElement.textContent = playerCoins;
+              uiCoinsEl.textContent = playerCoins;
               coins.splice(i, 1);
-              persistUserData();
+              saveBackToHub();
             } else {
               coin.x -= dx * 0.6;
               coin.y -= dy * 0.6;
@@ -1940,7 +1345,6 @@
         }
       }
 
-      // Update world objects using effectiveSpeed
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         obs.update(effectiveSpeed);
@@ -1950,7 +1354,7 @@
             player.x + player.width > obs.x &&
             player.y < obs.y + obs.height &&
             player.y + player.height > obs.y) {
-          gameOver("obstacle collision"); return;
+          endGame('obstacle collision'); return;
         }
       }
 
@@ -1964,13 +1368,12 @@
         const trap = traps[i];
         trap.update(effectiveSpeed);
         if (trap.x + trap.width < 0) { traps.splice(i, 1); continue; }
-        // Trigger trap only when player lands/stands on it (hidden until then)
         if (!trap.isTriggered &&
-            player.y + player.height === trap.y && // exact floor contact required
+            player.y + player.height === trap.y &&
             player.x + player.width > trap.x &&
             player.x < trap.x + trap.width) {
           trap.isTriggered = true;
-          gameOver("trap collision"); return;
+          endGame('trap collision'); return;
         }
       }
 
@@ -1986,9 +1389,9 @@
           else if (magnetLevel === 2) value = MAGNET_UPGRADE.values[1];
           if (curseCoinTaxActive) value = Math.max(0, Math.floor(value * 0.5));
           playerCoins += value;
-          coinCountElement.textContent = playerCoins;
+          uiCoinsEl.textContent = playerCoins;
           coins.splice(i, 1);
-          persistUserData();
+          saveBackToHub();
           continue;
         }
         if (coin.x + coin.size < 0) coins.splice(i, 1);
@@ -1997,43 +1400,52 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Ground
       ctx.fillStyle = '#2d3748';
       ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-      // Heavy fog overlay if active
       if (curseFogActive) {
-        ctx.fillStyle = 'rgba(255,255,255,0.25)'; // much foggier
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Render order
-      holes.forEach(hole => hole.draw());
-      traps.forEach(trap => trap.draw());
-      obstacles.forEach(obs => obs.draw());
-      coins.forEach(coin => coin.draw());
+      holes.forEach(h => h.draw());
+      traps.forEach(t => t.draw());
+      obstacles.forEach(o => o.draw());
+      coins.forEach(c => c.draw());
       if (player) player.draw();
 
-      // Blind bar
       if (curseBlindBarActive) {
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#000';
         ctx.fillRect(blindBar.x, 0, blindBar.w, canvas.height);
       }
     }
 
-    function gameOver(reason="unknown") {
+    function endGame(reason='unknown') {
       isGameOver = true;
-      curseModal.style.display = 'none';
-      const finalScore = Math.floor(score / 10);
-      finalScoreElement.textContent = finalScore;
-      if (finalScore > highScore) {
-        highScore = finalScore;
-        highScoreElement.textContent = highScore;
-      }
+      curseBackdrop.style.display = 'none';
+      const finalScore = Math.floor(score/10);
+      finalScoreEl.textContent = finalScore;
+
+      if (finalScore > highScore) { highScore = finalScore; }
       bestLevel = Math.max(bestLevel, finalScore);
-      persistUserData();
-      console.log("Game Over reason:", reason, "Score:", finalScore);
-      gameOverModal.style.display = 'flex';
+      saveBackToHub();
+      console.log('Game Over:', reason, 'Score:', finalScore);
+
+      uiHighEl.textContent = highScore;
+      gameOverBackdrop.style.display = 'flex';
+    }
+
+    // -------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------
+    function getDynamicGravity(multiplier = 1) {
+      const maxSpeed = BASE_GAME_SPEED + MAX_GAME_SPEED_INCREASE;
+      let baseSpeedAdj = BASE_GAME_SPEED + (curseSpeedSurgeActive ? 2 : 0);
+      const speedFactor = Math.min((currentSpeed - baseSpeedAdj) / ((maxSpeed - baseSpeedAdj) * GRAVITY_SLOW_FACTOR), 1);
+      const gravityBase = BASE_GRAVITY_START + cursePermanentGravityBoost;
+      let gravity = gravityBase + (MAX_GRAVITY - gravityBase) * Math.max(0, speedFactor);
+      if (curseDoubleGravityActive) gravity *= 2;
+      return gravity * multiplier;
     }
 
     function resizeCanvas() {
@@ -2044,31 +1456,98 @@
         const groundY = canvas.height - GROUND_HEIGHT - player.height;
         if (player.y > groundY && !isFalling) player.y = groundY;
       }
-      if (ctx) draw();
+      draw();
     }
 
-    window.addEventListener('load', () => {
-      handleInput();
-      updateHackerButtonUI();
-      updateTimeButtonUI();
-      updateGoldenHackerButtonUI();
-      window.addEventListener('mouseup', () => player?.crouch(false));
-      window.addEventListener('touchend', () => player?.crouch(false));
-      goToScreen('login');
-    });
+    function loadFromHub() {
+      currentUsername = hubGetCurrentUser();
+      if (!currentUsername) {
+        accountUsernameEl.textContent = 'Not logged in';
+        accountCoinsEl.textContent = '0';
+        accountHighEl.textContent = '0';
+        uiCoinsEl.textContent = '0';
+        uiHighEl.textContent = '0';
+        return false;
+      }
+      userData = hubGetUserData(currentUsername);
+      if (!userData) {
+        accountUsernameEl.textContent = currentUsername + ' (no data)';
+        return false;
+      }
+      playerCoins = userData.coins || 0;
+      highScore = userData.highScoreStickman || 0;
+      bestLevel = userData.bestLevelStickman || 0;
 
-    // Notes:
-    // - Slower speed ramp and obstacle density; enforced obstacle spacing and safer air spawns.
-    // - Heavy fog curse for reduced visibility.
-    // - Blue air obstacles spawn farther from red ground blocks.
-    // - Traps spawn far from obstacles, hinting when the field is clear; color blends with floor; spikes hidden until stepped on.
-    // - Traps only trigger when player stands on top (prevents phantom collisions).
-    // - Holes are clamped in width to avoid false positives.
-    // - After selecting a curse, all hazards clear and respawn fresh.
-    // - Curse Bender upgrade filters curses (L1 blocks Very Horrible, L2 blocks Horrible, L3 blocks Bad).
-    // - Admin panel unlocks by clicking "Leaderboard" title and entering code "stego".
-    // - Admin can delete, grant coins, change scores, lock/unlock, and reset accounts.
-    // - Locked accounts cannot log in; login shows "Your account is locked."
+      timeLevel = userData.upgrades?.time || 0;
+      hackerLevel = userData.upgrades?.hacker || 0;
+      jumpLevel = userData.upgrades?.jump || 0;
+      magnetLevel = userData.upgrades?.magnet || 0;
+      curseBenderLevel = userData.upgrades?.curseBender || 0;
+
+      ownedSkins = { default: true };
+      (userData.skins?.owned || []).forEach(id => ownedSkins[id] = true);
+      equippedSkin = userData.skins?.equipped || 'default';
+      goldenHackerUnlocked = !!userData.goldenHackerUnlocked || ownedSkins.golden;
+
+      accountUsernameEl.textContent = currentUsername;
+      accountCoinsEl.textContent = playerCoins;
+      accountHighEl.textContent = highScore;
+      uiCoinsEl.textContent = playerCoins;
+      uiHighEl.textContent = highScore;
+      uiBestEl.textContent = bestLevel;
+
+      updateShopReflection();
+      return true;
+    }
+
+    function saveBackToHub() {
+      if (!currentUsername) return;
+      const existing = hubGetUserData(currentUsername) || {};
+      const ownedList = Object.keys(ownedSkins).filter(k => ownedSkins[k]);
+      const data = {
+        password: existing.password || '',
+        coins: playerCoins,
+        upgrades: {
+          time: timeLevel,
+          hacker: hackerLevel,
+          jump: jumpLevel,
+          magnet: magnetLevel,
+          curseBender: curseBenderLevel
+        },
+        skins: { owned: ownedList, equipped: equippedSkin },
+        goldenHackerUnlocked: goldenHackerUnlocked || !!existing.goldenHackerUnlocked,
+        highScoreStickman: Math.max(existing.highScoreStickman || 0, highScore),
+        bestLevelStickman: Math.max(existing.bestLevelStickman || 0, bestLevel),
+
+        // future games can append their own keys untouched here
+        highScoreNewGame: existing.highScoreNewGame || 0,
+        bestLevelNewGame: existing.bestLevelNewGame || 0,
+        locked: existing.locked || false
+      };
+      hubSaveUserData(currentUsername, data);
+
+      accountCoinsEl.textContent = playerCoins;
+      accountHighEl.textContent = data.highScoreStickman;
+      uiHighEl.textContent = data.highScoreStickman;
+      uiBestEl.textContent = data.bestLevelStickman;
+    }
+
+    // -------------------------------------------------------
+    // Boot
+    // -------------------------------------------------------
+    window.addEventListener('resize', () => { resizeCanvas(); });
+    window.addEventListener('mouseup', () => player?.crouch(false));
+    window.addEventListener('touchend', () => player?.crouch(false));
+
+    (function init() {
+      bindInput();
+      const ok = loadFromHub();
+      resizeCanvas();
+      if (!ok) {
+        alert('Please login in the Hub first.');
+      }
+      startGame();
+    })();
   </script>
 </body>
 </html>
