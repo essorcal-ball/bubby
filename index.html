@@ -27,8 +27,9 @@
 
   <!-- Game Selection -->
   <div id="game-menu" class="hidden flex flex-col space-y-4">
-    <a href="stickman.html" class="bg-purple-600 px-6 py-3 rounded-lg text-center hover:bg-purple-700">Play Stickman Jumper</a>
-    <a href="newgame.html" class="bg-yellow-600 px-6 py-3 rounded-lg text-center hover:bg-yellow-700">Play New Game (Coming Soon)</a>
+    <!-- FIXED LINK: must match stickman.html filename -->
+    <a href="./stickman.html" class="bg-purple-600 px-6 py-3 rounded-lg text-center hover:bg-purple-700">Play Stickman Jumper</a>
+    <a href="./newgame.html" class="bg-yellow-600 px-6 py-3 rounded-lg text-center hover:bg-yellow-700">Play New Game (Coming Soon)</a>
   </div>
 
 <script>
@@ -58,6 +59,7 @@ function loginAccount() {
   if (!data) { alert("No account"); return; }
   if (data.password !== p) { alert("Wrong password"); return; }
   currentUser = u;
+  localStorage.setItem("arcadeCurrentUser", u);
   document.getElementById("current-user").textContent = u;
   document.getElementById("coin-count").textContent = data.coins;
   document.getElementById("stickman-score").textContent = data.highScoreStickman;
@@ -66,6 +68,7 @@ function loginAccount() {
 }
 function logout() {
   currentUser = null;
+  localStorage.removeItem("arcadeCurrentUser");
   document.getElementById("account-bar").classList.add("hidden");
   document.getElementById("game-menu").classList.add("hidden");
 }
