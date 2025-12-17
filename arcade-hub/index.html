@@ -1,1 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/account.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
 
+  <!-- Sticky Login Ribbon -->
+  <header class="fixed top-0 left-0 w-full bg-white shadow-md flex items-center justify-between px-6 py-2 z-50">
+    <div class="font-bold text-lg text-blue-600">Arcade Hub</div>
+    <div id="account-bar" class="hidden flex items-center gap-4">
+      <span>👤 <span id="current-user"></span></span>
+      <span>💰 Coins: <span id="coin-count">0</span></span>
+      <span>🏆 High Score: <span id="stickman-score">0</span></span>
+      <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
+    </div>
+    <div id="login-section" class="flex gap-2">
+      <input id="username" type="text" placeholder="Username" class="border rounded px-2 py-1">
+      <input id="password" type="password" placeholder="Password" class="border rounded px-2 py-1">
+      <button onclick="createAccount()" class="bg-green-500 text-white px-3 py-1 rounded">Sign Up</button>
+      <button onclick="loginAccount()" class="bg-blue-500 text-white px-3 py-1 rounded">Login</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="pt-20 px-6">
+    <h1 class="text-3xl font-bold mb-6">Choose Your Game</h1>
+
+    <!-- Game Cards Grid -->
+    <div id="game-menu" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      
+      <!-- Stickman Jumper Card -->
+      <div class="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+        <img src="attachments/JFSXsvXmCJpYyKS6Dcknr.png" alt="Stickman Jumper" class="w-full h-40 object-cover">
+        <div class="p-4">
+          <h2 class="text-lg font-bold">Stickman Jumper</h2>
+          <p class="text-sm text-gray-600 mb-3">Jump, dodge, and survive obstacles!</p>
+          <a href="./stickman.html" class="play-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Play</a>
+        </div>
+      </div>
+
+      <!-- Placeholder for New Game -->
+      <div class="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+        <div class="w-full h-40 bg-gray-300 flex items-center justify-center text-gray-500">Game Image</div>
+        <div class="p-4">
+          <h2 class="text-lg font-bold">New Game</h2>
+          <p class="text-sm text-gray-600 mb-3">Coming soon...</p>
+          <a href="./newgame.html" class="play-btn bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">Play</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+window.onload = () => {
+  initHub(); // from account.js
+};
+</script>
+</body>
+</html>
