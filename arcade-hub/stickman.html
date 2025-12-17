@@ -1,1 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stickman Jumper</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/account.js"></script>
+  <script src="js/game.js"></script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center min-h-screen">
 
+  <!-- Navigation Bar -->
+  <nav class="w-full bg-gray-800 p-4 flex gap-4 justify-center sticky top-0 z-50">
+    <a href="index.html" class="bg-gray-600 px-4 py-2 rounded">Back to Hub</a>
+    <a href="shop.html" class="bg-blue-600 px-4 py-2 rounded">Shop</a>
+    <a href="leaderboard.html" class="bg-green-600 px-4 py-2 rounded">Leaderboard</a>
+    <a href="admin.html" class="bg-red-600 px-4 py-2 rounded">Admin</a>
+  </nav>
+
+  <h1 class="text-4xl font-bold text-pink-500 mt-6">Stickman Jumper</h1>
+  <p id="user-info" class="mb-4"></p>
+
+  <canvas id="gameCanvas" class="w-full max-w-4xl aspect-video"></canvas>
+
+  <p class="mt-4">Score: <span id="score">0</span></p>
+  <button onclick="startGame()" class="bg-green-600 px-4 py-2 rounded mt-4">Restart</button>
+
+<script>
+window.onload = () => {
+  initGame(); // from game.js
+};
+</script>
+</body>
+</html>
